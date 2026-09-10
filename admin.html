@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>הזמר במסכה — ניהול</title>
+<meta name="description" content="מסך ניהול — הזמר במסכה">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" dir="rtl"></div>
+
+<!-- זהו עמוד הניהול: מגן רק על ידי קוד ה-PIN שמוגדר ב-config.js
+     (ADMIN_PIN). אין כאן שום התחברות עם משתמש/סיסמה של Google/Claude
+     וכו' — לכן חשוב לא לשתף את הקישור הזה באותו ערוץ שבו משתפים את
+     index.html עם הקהל. -->
+<script>window.MS_DEFAULT_ADMIN = true;</script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="db-adapter.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
