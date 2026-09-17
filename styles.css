@@ -11,7 +11,10 @@ body{
   min-height:100vh;
 }
 #app{min-height:100vh; display:flex; flex-direction:column;}
-button{font-family:inherit; cursor:pointer;}
+/* בלי color:inherit כאן, כפתורים שלא הוגדר להם צבע כתב מפורש (כמו
+   כרטיסי הבחירה במסך "מי היה הביצוע הכי טוב") מקבלים מהדפדפן צבע
+   ברירת מחדל שחור — בלתי נראה על רקע כהה. */
+button{font-family:inherit; cursor:pointer; color:inherit;}
 input,select{font-family:inherit;}
 ::selection{background:var(--gold); color:#100a20;}
 
