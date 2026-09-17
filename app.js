@@ -80,7 +80,13 @@ function makeFaceSVG(c, size){
 function avatarHTML(c, size){
   if(!c) return "";
   if(c.photo){
-    return '<img src="'+h(c.photo)+'" alt="'+h(c.name)+'" style="width:'+size+'px;height:'+size+'px;object-fit:cover;display:block;border-radius:50%;">';
+    /* אם התמונה נכשלת בטעינה (קובץ חסר, שם/נתיב לא מדויק וכו') —
+       נופלים אוטומטית בחזרה לאווטאר המצויר, במקום להציג אייקון
+       תמונה שבור לקהל. */
+    return '<span style="display:inline-block;width:'+size+'px;height:'+size+'px;">'+
+      '<img src="'+h(c.photo)+'" alt="'+h(c.name)+'" style="width:'+size+'px;height:'+size+'px;object-fit:cover;display:block;border-radius:50%;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
+      '<span style="display:none;">'+makeFaceSVG(c,size)+'</span>'+
+    '</span>';
   }
   return makeFaceSVG(c, size);
 }
@@ -96,6 +102,28 @@ function getParticipantId(){
 }
 function getParticipantName(){ return localStorage.getItem("ms_pname") || ""; }
 function setParticipantName(name){ localStorage.setItem("ms_pname", name); }
+
+/* "איפוס האירוע" מוחק את כל המשתתפים/הצבעות ב-Firestore, אבל אינו יכול
+   למחוק את מה שנשמר מקומית (localStorage) במכשירים של המשתתפים —
+   לכן בלי המנגנון הזה, כל מי שכבר נכנס פעם אחת ורק טוען/מרענן את
+   הדף אחרי איפוס נרשם מחדש אוטומטית (ensureParticipantDoc בהמשך
+   הקובץ), ו"מופיע" ברשימת המשתתפים/בדירוגים גם בלי שבאמת השתתף
+   אחרי האיפוס. הפתרון: state/admin נושא resetEpoch שמתעדכן בכל
+   איפוס; כל מכשיר משווה אותו למה ששמור אצלו מקומית, ואם הם שונים —
+   מוחקים את הזהות המקומית (שם + מזהה) וכל מטמון ההצבעות, כך שהמכשיר
+   חוזר למסך "הקלדת שם" בדיוק כאילו זו הפעם הראשונה שלו באירוע. */
+function getLocalEpoch(){ return localStorage.getItem("ms_epoch") || ""; }
+function setLocalEpoch(v){ localStorage.setItem("ms_epoch", String(v)); }
+function forgetParticipantIdentity(){
+  localStorage.removeItem("ms_pid");
+  localStorage.removeItem("ms_pname");
+  pid = getParticipantId();
+  STATE.myVotes = {};
+  STATE.myBest = null;
+  STATE.selectedCandidate = null;
+  STATE.selectedBest = null;
+  STATE.stats = null;
+}
 
 function getDb(){
   return window.MSDB || null;
@@ -229,6 +257,13 @@ function viewVoting(st){
         '<div style="font-size:16px; font-weight:800;">'+(myC ? '#'+myC.n+' · '+h(myC.name) : '—')+'</div>'+
       '</div>'+
     '</div>'+
+    /* כל עוד ההצבעה על הביצוע הזה עדיין פתוחה (המנחה לא סגר אותה),
+       מאפשרים להתחרט ולבחור מחדש — לחיצה פשוט פותחת שוב את רשת
+       הבחירה, עם הבחירה הקודמת מסומנת; שליחה חוזרת דורסת (set) את
+       אותה רשומת הצבעה, כולל עדכון זמן ההצבעה. */
+    (st.votingOpen ?
+      '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-vote" style="width:100%;">שינוי הניחוש</button></div>'
+    : '')+
     '<div class="spacer"></div>'+
     '<div class="card2" style="display:flex; align-items:center; gap:10px; justify-content:center;"><span class="dot warn"></span><span style="font-size:13.5px; color:var(--ink-dim);">ממתינים לביצוע הבא…</span></div>';
   }
@@ -792,6 +827,12 @@ function onAppClick(e){
   if(action === "pick-candidate"){
     STATE.selectedCandidate = Number(el.dataset.n);
     render();
+  } else if(action === "change-vote"){
+    if(!STATE.adminState || !STATE.adminState.votingOpen) return; // ליתר ביטחון — לא לאפשר שינוי אחרי שההצבעה נסגרה
+    var curSong = STATE.adminState.currentSong;
+    STATE.selectedCandidate = STATE.myVotes[curSong]; // הבחירה הקודמת מסומנת מראש ברשת
+    STATE.myVotes[curSong] = null; // מקומית בלבד — עדיין לא נמחק כלום ב-Firestore עד לשליחה מחדש
+    render();
   } else if(action === "submit-vote"){
     if(!database || STATE.selectedCandidate == null) return;
     var song = STATE.adminState.currentSong;
@@ -889,7 +930,7 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null});
+  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now()});
   ["participants","votes","bestVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -924,6 +965,19 @@ function subscribeAdminState(){
       }
     }
     var st = STATE.adminState;
+
+    /* אם המנהל ביצע "איפוס האירוע" מאז שהמכשיר הזה נכנס בפעם האחרונה —
+       resetEpoch ישתנה, ואנחנו שוכחים את הזהות המקומית (שם/הצבעות)
+       כדי שהמשתתף/ת יחזרו למסך הקלדת השם ולא "יופיעו" ברשימות בלי
+       שבאמת השתתפו אחרי האיפוס. */
+    if(st.resetEpoch){
+      var localEpoch = getLocalEpoch();
+      if(localEpoch && localEpoch !== String(st.resetEpoch)){
+        forgetParticipantIdentity();
+      }
+      setLocalEpoch(st.resetEpoch);
+    }
+
     if(st.stage === "voting" && STATE.myVotes[st.currentSong] === undefined && getParticipantName()){
       fetchMyVote(st.currentSong);
     }
