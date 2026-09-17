@@ -3,7 +3,12 @@ window.MS_CONFIG = {
   EVENT_NAME: "נופש החברה 2026",
 
   ADMIN_PIN: "2026",
-
+  WARMUP_QUESTION: "מי התלבש יותר יפה הערב?",
+  WARMUP_OPTIONS: [
+    {n:1, label:"ריבה"},
+    {n:2, label:"עמוס"},
+    {n:3, label:"שניהם מהממים"}
+  ],
   SONGS: [
     {id:1, name:"אלף", bg:"#3a2410", stroke:"#f0c896",
       path:'<circle cx="20" cy="20" r="10"/><path d="M14 11 L11 5 M26 11 L29 5"/><ellipse cx="20" cy="24" rx="5" ry="4"/>',
