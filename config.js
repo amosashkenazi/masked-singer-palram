@@ -64,7 +64,6 @@ window.MS_CONFIG = {
       path:'<ellipse cx="17" cy="25" rx="9" ry="7"/><circle cx="26" cy="15" r="6"/>',
       candidates: [101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120]},
 ],
-  ],
 
   CANDIDATES: [
    {n:1,  name:"מיכאל פליישמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
