@@ -323,8 +323,15 @@ function viewFinalVote(){
   }
   var cards = SONGS.map(function(s){
     var sel = STATE.selectedBest === s.id;
+    /* אם הוגדרה תמונת תחפושת לשיר הזה (song.costumePhoto ב-config.js),
+       מציגים אותה במקום האייקון המצויר; אם התמונה נכשלת בטעינה,
+       נופלים חזרה לאייקון המצויר (בדיוק כמו avatarHTML). */
+    var badgeInner = s.costumePhoto ?
+      '<img src="'+h(s.costumePhoto)+'" alt="'+h(s.name)+'" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+      '<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></span>'
+    : '<svg width="26" height="26" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg>';
     return '<button type="button" class="card2" data-action="pick-best" data-n="'+s.id+'" style="display:flex;flex-direction:column;align-items:center;gap:8px;'+(sel?'border-color:var(--gold);background:rgba(224,178,88,.12);':'')+'">'+
-      '<div class="song-icon-badge" style="background:'+s.bg+';"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></div>'+
+      '<div class="song-icon-badge" style="width:64px;height:64px;background:'+s.bg+';overflow:hidden;">'+badgeInner+'</div>'+
       '<div style="font-size:12.5px; font-weight:800;">'+h(s.name)+' · '+s.id+'</div>'+
     '</button>';
   }).join("");
@@ -563,9 +570,15 @@ function loadStats(st){
 function adminComputeRevealOrder(){
   var database = getDb();
   if(!database) return;
+  var st = STATE.adminState || {};
+  var savedAnswerKey = st.answerKey || {};
   var answerKey = {};
   SONGS.forEach(function(s){
-    var v = STATE.adminRevealPick[s.id];
+    /* סדר עדיפות: מה שהמנהל/ת בחר/ה עכשיו בפועל > מה ששמור כבר
+       ב-Firestore מפעם קודמת > הערך הקבוע מראש מ-config.js
+       (song.revealAnswer) — כך שאם כבר ידוע מראש מי מסתתר מתחת לכל
+       מסכה, אין צורך לבחור את זה שוב בכל בדיקה/איפוס. */
+    var v = STATE.adminRevealPick[s.id] || savedAnswerKey[s.id] || s.revealAnswer;
     if(v) answerKey[s.id] = Number(v);
   });
   if(Object.keys(answerKey).length < SONGS.length){
@@ -709,7 +722,11 @@ function adminMain(st){
       /* ---- phase A: pick who's under each mask (private — not shown to audience) ---- */
       var rows = SONGS.map(function(s){
         var savedN = st.answerKey && st.answerKey[s.id];
-        var pickN = STATE.adminRevealPick[s.id] || savedN || "";
+        /* אם ידוע מראש מי מסתתר מתחת למסכה הזו (song.revealAnswer
+           ב-config.js), משתמשים בזה כברירת מחדל — כדי שלא יהיה
+           צורך לבחור את זה שוב בכל בדיקה/איפוס. עדיין אפשר לשנות
+           ידנית מהתפריט אם צריך. */
+        var pickN = STATE.adminRevealPick[s.id] || savedN || s.revealAnswer || "";
         var options = '<option value="">בחר/י שם…</option>'+candidatesForSong(s).map(function(c){
           return '<option value="'+c.n+'" '+(Number(pickN)===c.n?'selected':'')+'>'+c.n+' · '+h(c.name)+'</option>';
         }).join("");
