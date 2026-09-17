@@ -87,11 +87,11 @@ window.MS_CONFIG = {
      Web app → "SDK setup and configuration" → Config.
      ראו README.md לצעד-אחר-צעד. */
   FIREBASE_CONFIG: {
-    apiKey: "REPLACE_ME",
-    authDomain: "REPLACE_ME.firebaseapp.com",
-    projectId: "REPLACE_ME",
-    storageBucket: "REPLACE_ME.appspot.com",
-    messagingSenderId: "REPLACE_ME",
-    appId: "REPLACE_ME"
+    apiKey: "AIza...",
+     authDomain: "masked-singer-palram.firebaseapp.com",
+     projectId: "masked-singer-palram",
+     storageBucket: "masked-singer-palram.appspot.com",
+     messagingSenderId: "123456789",
+     appId: "1:123456789:web:abcdef123456"
   }
 };
