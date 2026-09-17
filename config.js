@@ -7,22 +7,22 @@ window.MS_CONFIG = {
   SONGS: [
     {id:1, name:"אלף", bg:"#3a2410", stroke:"#f0c896",
       path:'<circle cx="20" cy="20" r="10"/><path d="M14 11 L11 5 M26 11 L29 5"/><ellipse cx="20" cy="24" rx="5" ry="4"/>',
-      candidates: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]},
+      candidates: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]},revealAnswer: 15,  costumePhoto: ""
     {id:2, name:"החיפושית", bg:"#173a1c", stroke:"#a8e6ae",
       path:'<circle cx="20" cy="24" r="10"/><path d="M20 14 L20 34"/><circle cx="20" cy="11" r="4"/>',
-      candidates: [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]},
+      candidates: [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]},revealAnswer: 26,  costumePhoto: ""
     {id:3, name:"האריה", bg:"#5a3c14", stroke:"#f0c675",
       path:'<circle cx="20" cy="22" r="7"/><path d="M20 8 L23 14 M20 8 L17 14"/>',
-      candidates: [41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]},
+      candidates: [41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60]},revealAnswer: 59,  costumePhoto: ""
     {id:4, name:"הפיל", bg:"#2c2c3a", stroke:"#dcdcf0",
       path:'<circle cx="19" cy="18" r="9"/><circle cx="8" cy="15" r="7"/>',
-      candidates: [61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80]},
+      candidates: [61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80]},revealAnswer: 71,  costumePhoto: ""
     {id:5, name:"הפנדה", bg:"#1c1c1c", stroke:"#ffffff",
       path:'<circle cx="20" cy="20" r="9"/><circle cx="9" cy="10" r="5"/><circle cx="31" cy="10" r="5"/>',
-      candidates: [81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100]},
-    {id:6, name:"התרנגולת", bg:"#4a1414", stroke:"#f5b0a0",
+      candidates: [81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100]},revealAnswer: 95,  costumePhoto: ""
+    {id:6, name:"התרנגול", bg:"#4a1414", stroke:"#f5b0a0",
       path:'<ellipse cx="17" cy="25" rx="9" ry="7"/><circle cx="26" cy="15" r="6"/>',
-      candidates: [101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120]}
+      candidates: [101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120]},revealAnswer: 110, costumePhoto: ""
   ],
 
   CANDIDATES: [
