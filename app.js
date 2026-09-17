@@ -2,7 +2,7 @@
    app.js — "הזמר במסכה", גרסה עצמאית לפריסה מחוץ ל-Claude.
    ------------------------------------------------------------------
    זהו פורט 1:1 של הלוגיקה שנבנתה ונבדקה ב-Claude Artifact (app.html),
-   עם שני שינויים מכוונים בלבד:
+   עם כמה שינויים מכוונים:
 
      1) getDb() קורא עכשיו ל-window.MSDB (המתאם ל-Firestore האמיתי,
         ראו db-adapter.js) במקום ל-window.claude.db.
@@ -11,6 +11,10 @@
         וכן נוספה avatarHTML() שמציגה תמונת photo אמיתית כשהיא קיימת
         במקום האווטאר המצויר (makeFaceSVG), כדי לאפשר להחליף בקלות
         שמות ותמונות של העובדים בלי לגעת בקוד הזה.
+     3) candidatesForSong() — כל שיר יכול (ברשות) להציג לקהל רשימת
+        מועמדים משלו במקום את כל ה-20 המשותפים, לפי שדה
+        song.candidates ב-config.js (ראו ההסבר שם). ברירת המחדל,
+        כשלא הוגדר, זהה בדיוק להתנהגות הקודמת — כל 20 לכל שיר.
 
    כל שאר ה-HTML, ה-state machine, חישוב סדר החשיפה לפי אחוז הזיהוי,
    וטיברייק המהירות בדירוגים — זהים לחלוטין למה שנבדק ואושר.
@@ -34,6 +38,17 @@ function h(str){
 }
 function songById(id){ for(var i=0;i<SONGS.length;i++) if(SONGS[i].id===id) return SONGS[i]; return null; }
 function candByN(n){ for(var i=0;i<CANDIDATES.length;i++) if(CANDIDATES[i].n===n) return CANDIDATES[i]; return null; }
+
+/* מחזירה את רשימת המועמדים שיוצגו לקהל עבור שיר נתון: אם לשיר יש
+   מערך song.candidates (רשימת מספרי n מתוך config.js) — מציגים רק
+   אותם; אחרת (ברירת מחדל) מציגים את כל 20 המועמדים, בדיוק כמו קודם. */
+function candidatesForSong(song){
+  if(song && Array.isArray(song.candidates) && song.candidates.length){
+    var list = song.candidates.map(candByN).filter(Boolean);
+    if(list.length) return list;
+  }
+  return CANDIDATES;
+}
 
 function makeFaceSVG(c, size){
   var faceCy = 33, parts = [];
@@ -177,10 +192,10 @@ function viewEntry(){
   '<div class="footer-note">בסריקת הקוד ובכניסה אני מאשר/ת השתתפות בתחרות הערב</div>';
 }
 
-function candGridHTML(selectedGetter, actionName){
+function candGridHTML(list, selectedGetter, actionName){
   var out = '<div class="grid-candidates">';
-  for(var i=0;i<CANDIDATES.length;i++){
-    var c = CANDIDATES[i];
+  for(var i=0;i<list.length;i++){
+    var c = list[i];
     var sel = selectedGetter() === c.n;
     out += '<button type="button" class="cand'+(sel?' sel':'')+'" data-action="'+actionName+'" data-n="'+c.n+'">'+
       '<div class="avatar-wrap">'+avatarHTML(c,56)+'<div class="num">'+c.n+'</div></div>'+
@@ -234,7 +249,7 @@ function viewVoting(st){
   '</div>'+
   '<h1 class="page-title" style="font-size:20px; margin-top:8px;">מי מסתתר מאחורי המסכה?</h1>'+
   '<div class="sub">מתחת למסכת '+h(song.name)+'</div>'+
-  candGridHTML(function(){return STATE.selectedCandidate;}, "pick-candidate")+
+  candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
   '<div style="margin-top:20px;">'+
     '<button class="btn btn-gold" data-action="submit-vote" '+(STATE.selectedCandidate?'':'disabled')+'>שליחת ניחוש</button>'+
   '</div>';
@@ -660,7 +675,7 @@ function adminMain(st){
       var rows = SONGS.map(function(s){
         var savedN = st.answerKey && st.answerKey[s.id];
         var pickN = STATE.adminRevealPick[s.id] || savedN || "";
-        var options = '<option value="">בחר/י שם…</option>'+CANDIDATES.map(function(c){
+        var options = '<option value="">בחר/י שם…</option>'+candidatesForSong(s).map(function(c){
           return '<option value="'+c.n+'" '+(Number(pickN)===c.n?'selected':'')+'>'+c.n+' · '+h(c.name)+'</option>';
         }).join("");
         return '<div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">'+
