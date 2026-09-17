@@ -68,7 +68,7 @@ window.MS_CONFIG = {
     {n:40,  name:"אדוה פלג",  photo:"photos/40.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:41,  name:"רפי כהן",  photo:"photos/41.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:42,  name:"יובל רובינסון",  photo:"photos/42.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:43,  name:"ברק קמתי",  photo:"photos/43.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:43,  name:"ברק רמתי",  photo:"photos/43.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:44,  name:"ענר בראב",  photo:"photos/44.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:45,  name:"אלכס אומנסקי",  photo:"photos/45.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:46,  name:"קובי זגורי",  photo:"photos/46.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
