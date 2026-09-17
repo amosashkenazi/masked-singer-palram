@@ -1,43 +1,3 @@
-/* ================================================================
-   config.js — כל מה שכדאי לערוך לפני האירוע נמצא כאן, במקום אחד.
-   שאר קבצי הקוד (app.js, db-adapter.js) לא צריכים להשתנות.
-   ================================================================
-
-   1) להחלפת השמות והתמונות של המועמדים/ות שמוצגים לקהל אחרי כל שיר:
-      ערכו את מערך CANDIDATES למטה. לכל מועמד/ת אפשר להגדיר:
-
-        n            מספר סידורי (1..20) — הוא גם המספר שמוצג על התג
-                      בכרטיס הבחירה. חייב להישאר ייחודי ורציף.
-        name          (חובה) השם שיוצג לקהל.
-        photo         (רשות) אם ממלאים כאן נתיב/כתובת לתמונה — התמונה
-                      תוצג לקהל במקום האווטאר המצויר. אפשר:
-                        - להניח קובץ תמונה בתיקיית photos/ שלצד הקבצים
-                          האלה, ולכתוב למשל: "photos/12.jpg"
-                        - או להדביק כתובת אינטרנט מלאה לתמונה קיימת.
-                      משאירים "" (מחרוזת ריקה) כדי להשתמש באווטאר
-                      המצויר האוטומטי במקום תמונה אמיתית.
-        skin / hair_color / hair_style / facial_hair / glasses
-                      משפיעים רק על האווטאר המצויר האוטומטי (כאשר אין
-                      photo). hair_style: "full" | "buzz" | "bald".
-                      facial_hair: "none" | "mustache" | "beard" | "stubble".
-
-      אפשר להשאיר בדיוק 20 מועמדים/ות, או לשנות את הכמות — רק חשוב
-      שהמספרים (n) יהיו רצופים החל מ-1, ושהשם/התמונה שכתובים כאן
-      יתאימו בדיוק למי שבאמת יופיע/תופיע על הבמה תחת אותו מספר.
-
-   2) להחלפת שמות/צבעים/סמלים של 6 "השירים" (הביצועים) — מערך SONGS.
-
-   3) קוד הכניסה למסך הניהול (admin.html) — ADMIN_PIN.
-      זהו שכבת ההגנה היחידה על מסך הניהול, ולכן מומלץ:
-        - לשנות אותו לקוד שאינו נחוש (לא "2026"/"0000" וכו').
-        - לא לשתף את קישור admin.html באותו ערוץ שבו משתפים את
-          הקישור לקהל (index.html).
-
-   4) פרטי החיבור לפרויקט ה-Firebase שלכם — FIREBASE_CONFIG.
-      את הערכים האלה מקבלים מקונסולת Firebase לאחר יצירת פרויקט
-      ואפליקציית Web בתוכו — ההוראות המלאות נמצאות ב-README.md.
-   ================================================================ */
-
 window.MS_CONFIG = {
 
   EVENT_NAME: "נופש החברה 2026",
@@ -45,7 +5,7 @@ window.MS_CONFIG = {
   ADMIN_PIN: "2026",
 
   SONGS: [
-         {id:1, name:"אלף", bg:"#3a2410", stroke:"#f0c896",
+    {id:1, name:"אלף", bg:"#3a2410", stroke:"#f0c896",
       path:'<circle cx="20" cy="20" r="10"/><path d="M14 11 L11 5 M26 11 L29 5"/><ellipse cx="20" cy="24" rx="5" ry="4"/>',
       candidates: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]},
     {id:2, name:"החיפושית", bg:"#173a1c", stroke:"#a8e6ae",
@@ -62,148 +22,143 @@ window.MS_CONFIG = {
       candidates: [81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100]},
     {id:6, name:"התרנגולת", bg:"#4a1414", stroke:"#f5b0a0",
       path:'<ellipse cx="17" cy="25" rx="9" ry="7"/><circle cx="26" cy="15" r="6"/>',
-      candidates: [101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120]},
-],
-
-  CANDIDATES: [
-   {n:1,  name:"מיכאל פליישמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:2,  name:"ישראל עוזרי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:3,  name:"אחמד זידאן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:4,  name:"תאאר טאהא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:5,  name:"זכריה כעביה",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:6,  name:"חיים ברוך",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:7,  name:"פרדי סולצמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:8,  name:"גל טייב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:9,  name:"אלברטו בן בונאן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:10,  name:"מתן טל",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:11,  name:"עומר ריאן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:12,  name:"לירן שגיא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:13,  name:"חאתם טהא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:14,  name:"איתי ליכט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:15,  name:"אורן טהר לב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:16,  name:"ענר בראב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:17,  name:"אדם בוחבוט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:18,  name:"איתמר סלוק",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:19,  name:"עמית זית",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:20,  name:"נחשון שטייף",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    // ---- 21-40 : קבוצת ה-20 המועמדים של שיר "החיפושית" (ביצוע 2) ----
-    {n:21,  name:"רותם צורף",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:22,  name:"עדי שני",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:23,  name:"זיוה טובול",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:24,  name:"מיה רבינוביץ",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:25,  name:"ליה חביב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:26,  name:"רונית שמאי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:27,  name:"קרן רייש",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:28,  name:"שרונה אומרדקר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:29,  name:"חגית ענבר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:30,  name:"יפעת קפלן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:31,  name:"ריקי לשם",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:32,  name:"אורה סוקולצקי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:33,  name:"סיגל חן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:34,  name:"מרב פדידה",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:35,  name:"גלית ארצי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:36,  name:"יעל אנקורי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:37,  name:"הלן מוסא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:38,  name:"סיגל לנצט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:39,  name:"גלית שושן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:40,  name:"אדוה פלג",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    // ---- 41-60 : קבוצת ה-20 המועמדים של שיר "האריה" (ביצוע 3) ----
-    {n:41,  name:"רפי כהן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:42,  name:"יובל רובינסון",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:43,  name:"ברק קמתי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:44,  name:"ענר בראב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:45,  name:"אלכס אומנסקי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:46,  name:"קובי זגורי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:47,  name:"אמיר גלטשטיין",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:48,  name:"ליאור גולן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:49,  name:"חן שרון",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:50,  name:"זאב גולדנברג",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:51,  name:"טל פורמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:52,  name:"עופר לביא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:53,  name:"ערן גולדמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:54,  name:"איתמר סלוק",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:55,  name:"אמיר סלייפר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:56,  name:"אורי אפרת",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:57,  name:"יונתן המסי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:58,  name:"אבישי זמיר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:59,  name:"חנן פרחי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:60,  name:"ניצן ברדר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    // ---- 61-80 : קבוצת ה-20 המועמדים של שיר "הפיל" (ביצוע 4) ----
-    {n:61,  name:"חאלד חיג'אזי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:62,  name:"מוחמד חוג'יראת",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:63,  name:"סובחי חאלדי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:64,  name:"ברק רמתי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:65,  name:"אלי אסולין",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:66,  name:"עומר סובח",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:67,  name:"חסן רחייל",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:68,  name:"חאתם טהא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:69,  name:"מוחמד סעדי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:70,  name:"עבד נמראנה",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:71,  name:"הילאל אבו ניל",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:72,  name:"נפאע נפאע",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:73,  name:"מוחמד טהא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:74,  name:"מוהיב נעמה",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:75,  name:"נחשון שטייף",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:76,  name:"רמי דיאב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:77,  name:"באסל חאלדי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:78,  name:"שמעון סאינה",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:79,  name:"מוחמד חיג'אזי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:80,  name:"פאיז זובידאת",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    // ---- 81-100 : קבוצת ה-20 המועמדים של שיר "הפנדה" (ביצוע 5) ----
-    {n:81,  name:"ביאטה סטפובוי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:82,  name:"יפעת קפלן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:83,  name:"שיר עמר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:84,  name:"טליה אפרת",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:85,  name:"אורלי רום",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:86,  name:"רוני דרור",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:87,  name:"ליליה אייזנברג",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:88,  name:"צביה חמאוואי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:89,  name:"ליהי דותן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:90,  name:"לימור ענתבי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:91,  name:"מירי פנחס",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:92,  name:"מירב כרמון",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:93,  name:"סיגל חן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:94,  name:"ליאור טולדנו",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:95,  name:"שרון גולן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:96,  name:"טובה כדורי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:97,  name:"אופיר שביט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:98,  name:"עדי עוזרי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:99,  name:"יפעת ליכט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:100,  name:"סנדרה גלנט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    // ---- 101-120 : קבוצת ה-20 המועמדים של שיר "התרנגולת" (ביצוע 6) ----
-    {n:101,  name:"אחמד המאם",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:102,  name:"אלי אסולין",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:103,  name:"פואד חטיב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:104,  name:"ישראל עוזרי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:105,  name:"גיא סנדלר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:106,  name:"נועם קמרי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:107,  name:"ערן גולדמן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:108,  name:"חסן עאמר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:109,  name:"יבגני זכרוב",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:110,  name:"אדם בוחבוט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:111,  name:"לירן שגיא",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:112,  name:"רפי כהן",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:113,  name:"ניצן ברדר",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:114,  name:"ברק רמתי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:115,  name:"עידן גולדשטיין",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:116,  name:"מרעי חאלדי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:117,  name:"מתן טל",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:118,  name:"ולאד אוסטרובסקי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:119,  name:"איתי ליכט",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:120,  name:"קובי זגורי",  photo:"", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-  
+      candidates: [101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120]}
   ],
 
-  /* פרטי פרויקט ה-Firebase שלכם. מדביקים כאן את האובייקט המדויק
-     שמתקבל מקונסולת Firebase → הגדרות הפרויקט → האפליקציות שלך →
-     Web app → "SDK setup and configuration" → Config.
-     ראו README.md לצעד-אחר-צעד. */
+  CANDIDATES: [
+    {n:1,  name:"מיכאל פליישמן",  photo:"photos/1.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:2,  name:"ישראל עוזרי",  photo:"photos/2.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:3,  name:"אחמד זידאן",  photo:"photos/3.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:4,  name:"תאאר טאהא",  photo:"photos/4.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:5,  name:"זכריה כעביה",  photo:"photos/5.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:6,  name:"חיים ברוך",  photo:"photos/6.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:7,  name:"פרדי סולצמן",  photo:"photos/7.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:8,  name:"גל טייב",  photo:"photos/8.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:9,  name:"אלברטו בן בונאן",  photo:"photos/9.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:10,  name:"מתן טל",  photo:"photos/10.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:11,  name:"עומר ריאן",  photo:"photos/11.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:12,  name:"לירן שגיא",  photo:"photos/12.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:13,  name:"חאתם טהא",  photo:"photos/13.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:14,  name:"איתי ליכט",  photo:"photos/14.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:15,  name:"אורן טהר לב",  photo:"photos/15.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:16,  name:"ענר בראב",  photo:"photos/16.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:17,  name:"אדם בוחבוט",  photo:"photos/17.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:18,  name:"איתמר סלוק",  photo:"photos/18.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:19,  name:"עמית זית",  photo:"photos/19.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:20,  name:"נחשון שטייף",  photo:"photos/20.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:21,  name:"רותם צורף",  photo:"photos/21.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:22,  name:"עדי שני",  photo:"photos/22.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:23,  name:"זיוה טובול",  photo:"photos/23.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:24,  name:"מיה רבינוביץ",  photo:"photos/24.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:25,  name:"ליה חביב",  photo:"photos/25.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:26,  name:"רונית שמאי",  photo:"photos/26.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:27,  name:"קרן רייש",  photo:"photos/27.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:28,  name:"שרונה אומרדקר",  photo:"photos/28.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:29,  name:"חגית ענבר",  photo:"photos/29.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:30,  name:"יפעת קפלן",  photo:"photos/30.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:31,  name:"ריקי לשם",  photo:"photos/31.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:32,  name:"אורה סוקולצקי",  photo:"photos/32.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:33,  name:"סיגל חן",  photo:"photos/33.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:34,  name:"מרב פדידה",  photo:"photos/34.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:35,  name:"גלית ארצי",  photo:"photos/35.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:36,  name:"יעל אנקורי",  photo:"photos/36.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:37,  name:"הלן מוסא",  photo:"photos/37.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:38,  name:"סיגל לנצט",  photo:"photos/38.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:39,  name:"גלית שושן",  photo:"photos/39.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:40,  name:"אדוה פלג",  photo:"photos/40.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:41,  name:"רפי כהן",  photo:"photos/41.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:42,  name:"יובל רובינסון",  photo:"photos/42.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:43,  name:"ברק קמתי",  photo:"photos/43.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:44,  name:"ענר בראב",  photo:"photos/44.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:45,  name:"אלכס אומנסקי",  photo:"photos/45.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:46,  name:"קובי זגורי",  photo:"photos/46.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:47,  name:"אמיר גלטשטיין",  photo:"photos/47.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:48,  name:"ליאור גולן",  photo:"photos/48.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:49,  name:"חן שרון",  photo:"photos/49.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:50,  name:"זאב גולדנברג",  photo:"photos/50.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:51,  name:"טל פורמן",  photo:"photos/51.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:52,  name:"עופר לביא",  photo:"photos/52.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:53,  name:"ערן גולדמן",  photo:"photos/53.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:54,  name:"איתמר סלוק",  photo:"photos/54.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:55,  name:"אמיר סלייפר",  photo:"photos/55.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:56,  name:"אורי אפרת",  photo:"photos/56.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:57,  name:"יונתן המסי",  photo:"photos/57.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:58,  name:"אבישי זמיר",  photo:"photos/58.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:59,  name:"חנן פרחי",  photo:"photos/59.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:60,  name:"ניצן ברדר",  photo:"photos/60.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:61,  name:"חאלד חיג'אזי",  photo:"photos/61.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:62,  name:"מוחמד חוג'יראת",  photo:"photos/62.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:63,  name:"סובחי חאלדי",  photo:"photos/63.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:64,  name:"ברק רמתי",  photo:"photos/64.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:65,  name:"אלי אסולין",  photo:"photos/65.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:66,  name:"עומר סובח",  photo:"photos/66.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:67,  name:"חסן רחייל",  photo:"photos/67.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:68,  name:"חאתם טהא",  photo:"photos/68.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:69,  name:"מוחמד סעדי",  photo:"photos/69.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:70,  name:"עבד נמראנה",  photo:"photos/70.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:71,  name:"הילאל אבו ניל",  photo:"photos/71.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:72,  name:"נפאע נפאע",  photo:"photos/72.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:73,  name:"מוחמד טהא",  photo:"photos/73.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:74,  name:"מוהיב נעמה",  photo:"photos/74.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:75,  name:"נחשון שטייף",  photo:"photos/75.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:76,  name:"רמי דיאב",  photo:"photos/76.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:77,  name:"באסל חאלדי",  photo:"photos/77.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:78,  name:"שמעון סאינה",  photo:"photos/78.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:79,  name:"מוחמד חיג'אזי",  photo:"photos/79.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:80,  name:"פאיז זובידאת",  photo:"photos/80.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:81,  name:"ביאטה סטפובוי",  photo:"photos/81.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:82,  name:"יפעת קפלן",  photo:"photos/82.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:83,  name:"שיר עמר",  photo:"photos/83.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:84,  name:"טליה אפרת",  photo:"photos/84.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:85,  name:"אורלי רום",  photo:"photos/85.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:86,  name:"רוני דרור",  photo:"photos/86.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:87,  name:"ליליה אייזנברג",  photo:"photos/87.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:88,  name:"צביה חמאוואי",  photo:"photos/88.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:89,  name:"ליהי דותן",  photo:"photos/89.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:90,  name:"לימור ענתבי",  photo:"photos/90.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:91,  name:"מירי פנחס",  photo:"photos/91.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:92,  name:"מירב כרמון",  photo:"photos/92.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:93,  name:"סיגל חן",  photo:"photos/93.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:94,  name:"ליאור טולדנו",  photo:"photos/94.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:95,  name:"שרון גולן",  photo:"photos/95.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:96,  name:"טובה כדורי",  photo:"photos/96.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:97,  name:"אופיר שביט",  photo:"photos/97.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:98,  name:"עדי עוזרי",  photo:"photos/98.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:99,  name:"יפעת ליכט",  photo:"photos/99.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:100,  name:"סנדרה גלנט",  photo:"photos/100.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:101,  name:"אחמד המאם",  photo:"photos/101.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:102,  name:"אלי אסולין",  photo:"photos/102.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:103,  name:"פואד חטיב",  photo:"photos/103.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:104,  name:"ישראל עוזרי",  photo:"photos/104.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:105,  name:"גיא סנדלר",  photo:"photos/105.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:106,  name:"נועם קמרי",  photo:"photos/106.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:107,  name:"ערן גולדמן",  photo:"photos/107.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:108,  name:"חסן עאמר",  photo:"photos/108.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:109,  name:"יבגני זכרוב",  photo:"photos/109.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:110,  name:"אדם בוחבוט",  photo:"photos/110.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:111,  name:"לירן שגיא",  photo:"photos/111.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:112,  name:"רפי כהן",  photo:"photos/112.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:113,  name:"ניצן ברדר",  photo:"photos/113.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:114,  name:"ברק רמתי",  photo:"photos/114.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:115,  name:"עידן גולדשטיין",  photo:"photos/115.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:116,  name:"מרעי חאלדי",  photo:"photos/116.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:117,  name:"מתן טל",  photo:"photos/117.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:118,  name:"ולאד אוסטרובסקי",  photo:"photos/118.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:119,  name:"איתי ליכט",  photo:"photos/119.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:120,  name:"קובי זגורי",  photo:"photos/120.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false}
+  ],
+
+  /* ⚠️ שימו לב: הערכים כאן למטה הם עדיין ה-דוגמה הכללית מה-README,
+     ולא הערכים האמיתיים שלכם! צריך להיכנס לקונסולת Firebase →
+     הגדרות הפרויקט (⚙️) → General → "Your apps" → אפליקציית ה-Web
+     שלכם → ולהעתיק משם את שש השורות האמיתיות של firebaseConfig,
+     ולהדביק אותן במקום השורות הבאות: */
   FIREBASE_CONFIG: {
-     apiKey: "AIzaSyBZfZwGB6-SJUbN8ajaQAbdMUUfmfvmV2M",
-  authDomain: "masked-singer-palram.firebaseapp.com",
-  projectId: "masked-singer-palram",
-  storageBucket: "masked-singer-palram.firebasestorage.app",
-  messagingSenderId: "897746027701",
-  appId: "1:897746027701:web:ef9dfb5a9833478a7faafc"
+    apiKey: "AIza...",
+    authDomain: "masked-singer-palram.firebaseapp.com",
+    projectId: "masked-singer-palram",
+    storageBucket: "masked-singer-palram.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
   }
 };
