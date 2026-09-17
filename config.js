@@ -45,17 +45,17 @@ window.MS_CONFIG = {
   ADMIN_PIN: "2026",
 
   SONGS: [
-    {id:1, name:"החיפושית", bg:"#173a1c", stroke:"#a8e6ae",
+    {id:1, name:"אלף", bg:"#173a1c", stroke:"#a8e6ae",
       path:'<circle cx="20" cy="24" r="10"/><path d="M20 14 L20 34"/><circle cx="20" cy="11" r="4"/>'},
-    {id:2, name:"האריה", bg:"#5a3c14", stroke:"#f0c675",
+    {id:2, name:"החיפושית", bg:"#5a3c14", stroke:"#f0c675",
       path:'<circle cx="20" cy="22" r="7"/><path d="M20 8 L23 14 M20 8 L17 14"/>'},
-    {id:3, name:"התרנגולת", bg:"#4a1414", stroke:"#f5b0a0",
+    {id:3, name:"האריה", bg:"#4a1414", stroke:"#f5b0a0",
       path:'<ellipse cx="17" cy="25" rx="9" ry="7"/><circle cx="26" cy="15" r="6"/>'},
     {id:4, name:"הפיל", bg:"#2c2c3a", stroke:"#dcdcf0",
       path:'<circle cx="19" cy="18" r="9"/><circle cx="8" cy="15" r="7"/>'},
-    {id:5, name:"אלף", bg:"#3a2410", stroke:"#f0c896",
+    {id:5, name:"הפנדה", bg:"#3a2410", stroke:"#f0c896",
       path:'<circle cx="20" cy="20" r="10"/><path d="M14 11 L11 5 M26 11 L29 5"/><ellipse cx="20" cy="24" rx="5" ry="4"/>'},
-    {id:6, name:"הפנדה", bg:"#1c1c1c", stroke:"#ffffff",
+    {id:6, name:"התרנגולת", bg:"#1c1c1c", stroke:"#ffffff",
       path:'<circle cx="20" cy="20" r="9"/><circle cx="9" cy="10" r="5"/><circle cx="31" cy="10" r="5"/>'}
   ],
 
