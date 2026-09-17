@@ -28,6 +28,10 @@ var SONGS = window.MS_CONFIG.SONGS;
 var CANDIDATES = window.MS_CONFIG.CANDIDATES;
 var ADMIN_PIN = window.MS_CONFIG.ADMIN_PIN;
 var EVENT_NAME = window.MS_CONFIG.EVENT_NAME;
+/* שאלת חימום אופציונלית לפני תחילת ההצבעות — אם לא הוגדרה ב-config.js,
+   WARMUP_OPTIONS יהיה ריק והשלב פשוט לא יציג שום שאלה. */
+var WARMUP_QUESTION = window.MS_CONFIG.WARMUP_QUESTION || "";
+var WARMUP_OPTIONS = window.MS_CONFIG.WARMUP_OPTIONS || [];
 
 /* ===================== HELPERS ===================== */
 
@@ -120,8 +124,10 @@ function forgetParticipantIdentity(){
   pid = getParticipantId();
   STATE.myVotes = {};
   STATE.myBest = null;
+  STATE.myWarmup = undefined;
   STATE.selectedCandidate = null;
   STATE.selectedBest = null;
+  STATE.selectedWarmup = null;
   STATE.stats = null;
 }
 
@@ -136,8 +142,10 @@ var STATE = {
   adminState: null,
   myVotes: {},        // song -> candidate n
   myBest: null,        // song n chosen as best
+  myWarmup: undefined,  // undefined=טרם נבדק מול השרת, null=נבדק ואין תשובה, מספר=התשובה שנשלחה
   selectedCandidate: null,
   selectedBest: null,
+  selectedWarmup: null,
   stats: null,         // cached aggregation
   statsLoading: false,
   lbTab: "guessers",    // guessers | songacc | bestperf
@@ -148,6 +156,7 @@ var STATE = {
   adminVoteCount: null,
   adminParticipantCount: null,
   adminParticipants: null,
+  adminWarmup: null,   // {total, counts:{n->count}} — תוצאות שאלת החימום, מתעדכן חי
   adminView: "stage", // "stage" | "participants" — local admin-only UI toggle, never affects what the audience sees
   adminRevealPick: {},   // song -> candidate n chosen in the reveal selector
   confirmModal: null     // {text, onYes}
@@ -183,7 +192,8 @@ function renderAudience(){
     inner = viewLoading("טוען את מצב האירוע…");
   } else {
     var st = STATE.adminState;
-    if(st.stage === "voting") inner = viewVoting(st);
+    if(st.stage === "warmup") inner = viewWarmup(st);
+    else if(st.stage === "voting") inner = viewVoting(st);
     else if(st.stage === "recap") inner = viewRecap();
     else if(st.stage === "finalVote") inner = viewFinalVote();
     else if(st.stage === "reveal") inner = viewReveal(st);
@@ -233,6 +243,58 @@ function candGridHTML(list, selectedGetter, actionName){
   }
   out += '</div>';
   return out;
+}
+
+/* ===================== שאלת חימום (לפני תחילת ההצבעות) ===================== */
+
+function viewWarmup(st){
+  if(!WARMUP_OPTIONS.length){
+    /* לא הוגדרה שאלת חימום ב-config.js (WARMUP_QUESTION/WARMUP_OPTIONS) —
+       אין מה להציג, ממתינים בפשטות. */
+    return viewLoading("ממתינים לתחילת הערב…");
+  }
+
+  var already = STATE.myWarmup != null;
+
+  if(already){
+    var chosen = WARMUP_OPTIONS.filter(function(o){ return o.n === STATE.myWarmup; })[0];
+    return ''+
+    '<div style="margin-top:12vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+      '<div style="width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#3a2e12,#140b28);border:2px solid var(--gold);">'+
+        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'+
+      '</div>'+
+      '<h1 class="page-title" style="margin-top:22px; font-size:21px;">התשובה נקלטה!</h1>'+
+      '<div class="sub">בחרת: '+(chosen ? h(chosen.label) : '—')+'</div>'+
+    '</div>'+
+    (st.warmupOpen ?
+      '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-warmup" style="width:100%;">שינוי תשובה</button></div>'
+    : '')+
+    '<div class="spacer"></div>'+
+    '<div class="footer-note">בקרוב מתחילים!</div>';
+  }
+
+  if(!st.warmupOpen){
+    return ''+
+    '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+      '<div class="eyebrow">שאלת חימום</div>'+
+      '<h1 class="page-title" style="font-size:21px; margin-top:6px;">כמעט מתחילים…</h1>'+
+      '<div class="sub">השאלה תיפתח מיד</div>'+
+    '</div>';
+  }
+
+  var rows = WARMUP_OPTIONS.map(function(o){
+    var sel = STATE.selectedWarmup === o.n;
+    return '<button type="button" class="card2" data-action="pick-warmup" data-n="'+o.n+'" style="width:100%; text-align:right; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;'+(sel?'border-color:var(--gold);background:rgba(224,178,88,.12);':'')+'">'+
+      '<span style="font-size:14.5px; font-weight:700;">'+h(o.label)+'</span>'+
+      (sel ? '<span class="dot" style="background:var(--gold); width:10px; height:10px; border-radius:50%; flex-shrink:0;"></span>' : '')+
+    '</button>';
+  }).join("");
+
+  return ''+
+  '<div class="eyebrow">שאלת חימום</div>'+
+  '<h1 class="page-title" style="font-size:21px;">'+h(WARMUP_QUESTION)+'</h1>'+
+  '<div style="margin-top:20px;">'+rows+'</div>'+
+  '<div style="margin-top:6px;"><button class="btn btn-gold" data-action="submit-warmup" '+(STATE.selectedWarmup?'':'disabled')+'>שליחת תשובה</button></div>';
 }
 
 function viewVoting(st){
@@ -660,6 +722,12 @@ function adminSidebar(st){
       '<span class="dot ok"></span>'+
     '</button>'+
     '<div>'+
+      '<div class="admin-h" style="margin-bottom:8px;">לפני שמתחילים</div>'+
+      '<div style="display:flex; flex-direction:column; gap:8px;">'+
+        stageBtn("שאלת חימום לקהל", st.stage==="warmup", "admin-set-stage", 'data-stage="warmup"')+
+      '</div>'+
+    '</div>'+
+    '<div>'+
       '<div class="admin-h" style="margin-bottom:8px;">שלב באירוע</div>'+
       '<div style="display:flex; flex-direction:column; gap:8px;">'+songBtns+'</div>'+
     '</div>'+
@@ -695,6 +763,44 @@ function adminMain(st){
       '<h1 class="page-title">'+list.length+' משתתפים הזינו את שמם</h1>'+
       '<div class="sub">הרשימה כוללת כל מי שפתח את האפליקציה והקליד שם — לא מדובר בסטטוס "מחובר/מנותק" חי, אלא ברשימה מצטברת של כל מי שנכנס עד כה.</div>'+
       '<div style="margin-top:20px; max-width:520px; max-height:70vh; overflow-y:auto;">'+rows+'</div>'+
+    '</div>';
+  }
+  if(st.stage === "warmup"){
+    if(!WARMUP_OPTIONS.length){
+      return '<div class="admin-main">'+
+        '<div class="admin-h">שאלת חימום</div>'+
+        '<h1 class="page-title">לא הוגדרה שאלת חימום</h1>'+
+        '<div class="sub">כדי להפעיל שלב זה, מוסיפים ב-config.js את השדות WARMUP_QUESTION ו-WARMUP_OPTIONS (ראו את ההסבר שנשלח בנפרד).</div>'+
+      '</div>';
+    }
+    var wu = STATE.adminWarmup || {total:0, counts:{}};
+    var wRows = WARMUP_OPTIONS.map(function(o){
+      var c = wu.counts[o.n] || 0;
+      var pct = wu.total ? Math.round((c/wu.total)*100) : 0;
+      return '<div class="card" style="margin-bottom:10px;">'+
+        '<div style="display:flex; align-items:center; justify-content:space-between;">'+
+          '<div style="font-weight:800; font-size:14px;">'+h(o.label)+'</div>'+
+          '<div style="font-size:13px; font-weight:800; color:var(--gold2);">'+c+' ('+pct+'%)</div>'+
+        '</div>'+
+        '<div style="height:8px; border-radius:5px; background:var(--card2); margin-top:8px; overflow:hidden;">'+
+          '<div style="height:100%; width:'+pct+'%; background:var(--gold); border-radius:5px;"></div>'+
+        '</div>'+
+      '</div>';
+    }).join("");
+    return '<div class="admin-main">'+
+      '<div class="admin-h">שלב נוכחי</div>'+
+      '<h1 class="page-title">שאלת חימום לקהל</h1>'+
+      '<div class="sub" style="margin-top:6px;">'+h(WARMUP_QUESTION)+'</div>'+
+      '<div style="display:flex; gap:12px; margin-top:20px;">'+
+        '<button class="btn '+(st.warmupOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-warmup" data-open="1">פתיחת שאלה</button>'+
+        '<button class="btn '+(!st.warmupOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-warmup" data-open="0">סגירת שאלה</button>'+
+      '</div>'+
+      '<div class="card" style="margin-top:24px; max-width:420px;">'+
+        '<div style="font-size:12.5px; color:var(--ink-dim);">סה"כ ענו</div>'+
+        '<div style="font-size:34px; font-weight:900; margin-top:6px; font-variant-numeric:tabular-nums;">'+wu.total+'</div>'+
+      '</div>'+
+      '<div style="margin-top:20px; max-width:420px;">'+wRows+'</div>'+
+      '<div class="sub" style="margin-top:10px;">מצב שאלה: <b style="color:'+(st.warmupOpen?"var(--ok)":"var(--bad)")+';">'+(st.warmupOpen?'פתוחה':'סגורה')+'</b> — התוצאות מתעדכנות חי, ואפשר להקרין את המסך הזה לקהל.</div>'+
     '</div>';
   }
   if(st.stage === "voting"){
@@ -773,7 +879,7 @@ function adminMain(st){
     '</div>';
   }
 
-  var stageLabels = {recap:"תזכורת לקהל", finalVote:"הצבעה לביצוע הכי טוב", summary:"סיכום אישי לקהל", leaderboards:"לוחות תוצאות לקהל"};
+  var stageLabels = {warmup:"שאלת חימום לקהל", recap:"תזכורת לקהל", finalVote:"הצבעה לביצוע הכי טוב", summary:"סיכום אישי לקהל", leaderboards:"לוחות תוצאות לקהל"};
   return '<div class="admin-main">'+
     '<div class="admin-h">שלב נוכחי</div>'+
     '<h1 class="page-title">'+h(stageLabels[st.stage] || st.stage)+'</h1>'+
@@ -874,6 +980,26 @@ function onAppClick(e){
       STATE.selectedBest = null;
       render();
     });
+  } else if(action === "pick-warmup"){
+    STATE.selectedWarmup = Number(el.dataset.n);
+    render();
+  } else if(action === "change-warmup"){
+    if(!STATE.adminState || !STATE.adminState.warmupOpen) return; // לא לאפשר שינוי אחרי שהשאלה נסגרה
+    STATE.selectedWarmup = STATE.myWarmup;
+    STATE.myWarmup = null;
+    render();
+  } else if(action === "submit-warmup"){
+    if(!database || STATE.selectedWarmup == null) return;
+    var wn = STATE.selectedWarmup;
+    el.disabled = true;
+    database.doc("warmupVotes/"+pid).set({pid:pid, choice:wn, ts:Date.now()}).then(function(){
+      STATE.myWarmup = wn;
+      STATE.selectedWarmup = null;
+      render();
+    });
+  } else if(action === "admin-toggle-warmup"){
+    if(!database) return;
+    database.doc("state/admin").update({warmupOpen: el.dataset.open === "1"});
   } else if(action === "lb-tab"){
     STATE.lbTab = el.dataset.tab;
     render();
@@ -947,8 +1073,8 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now()});
-  ["participants","votes","bestVotes"].forEach(function(col){
+  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now(), warmupOpen:false});
+  ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
     });
@@ -975,7 +1101,7 @@ function subscribeAdminState(){
     if(snap.exists){
       STATE.adminState = snap.data();
     } else {
-      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null};
+      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, warmupOpen:false};
       if(STATE.isAdmin && !ensuredAdminDoc){
         ensuredAdminDoc = true;
         database.doc("state/admin").set(STATE.adminState);
@@ -1003,6 +1129,9 @@ function subscribeAdminState(){
     }
     if(st.stage === "finalVote" && STATE.myBest === null && getParticipantName()){
       fetchMyBest();
+    }
+    if(st.stage === "warmup" && STATE.myWarmup === undefined && getParticipantName()){
+      fetchMyWarmup();
     }
     render();
   }, function(err){
@@ -1038,6 +1167,14 @@ function fetchMyBest(){
     render();
   });
 }
+function fetchMyWarmup(){
+  var database = getDb();
+  if(!database) return;
+  database.doc("warmupVotes/"+pid).get().then(function(snap){
+    STATE.myWarmup = snap.exists ? snap.data().choice : null;
+    render();
+  });
+}
 
 var adminExtrasStarted = false;
 function subscribeAdminExtras(){
@@ -1054,6 +1191,18 @@ function subscribeAdminExtras(){
       var data = d.data() || {};
       return {id:d.id, name:data.name || "", joinedAt: data.joinedAt || 0};
     }).sort(function(a,b){ return a.joinedAt - b.joinedAt; });
+    render();
+  }, function(){});
+
+  /* תוצאות שאלת החימום מתעדכנות חי, בלי קשר לשלב הנוכחי — כך שגם
+     אחרי שעוברים הלאה, אפשר לחזור ולהציג את התוצאות המצטברות. */
+  database.collection("warmupVotes").limit(1000).onSnapshot(function(snap){
+    var counts = {};
+    snap.docs.forEach(function(d){
+      var data = d.data() || {};
+      if(data.choice != null) counts[data.choice] = (counts[data.choice]||0) + 1;
+    });
+    STATE.adminWarmup = {total: snap.size, counts: counts};
     render();
   }, function(){});
 
