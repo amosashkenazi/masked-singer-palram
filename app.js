@@ -247,11 +247,42 @@ function candGridHTML(list, selectedGetter, actionName){
 
 /* ===================== שאלת חימום (לפני תחילת ההצבעות) ===================== */
 
+/* מציגה לקהל (בטלפון של כל אחד/ת) את התפלגות התשובות לשאלת החימום —
+   מוצגת רק אחרי שהמנהל/ת בוחר/ת "הצגת התפלגות התשובות לקהל", בלי
+   קשר לשאלה אם ההצבעה עדיין פתוחה או כבר נסגרה. הנתונים מגיעים דרך
+   state/admin.warmupCounts, שהמנהל כותב אליו חי, כך שלכל מכשיר קהל
+   מספיק להאזין למסמך שהוא כבר מאזין לו ממילא — בלי שאילתה נוספת. */
+function viewWarmupResults(st){
+  var wu = st.warmupCounts || {total:0, counts:{}};
+  var rows = WARMUP_OPTIONS.map(function(o){
+    var c = wu.counts[o.n] || 0;
+    var pct = wu.total ? Math.round((c/wu.total)*100) : 0;
+    return '<div class="card" style="margin-bottom:10px;">'+
+      '<div style="display:flex; align-items:center; justify-content:space-between;">'+
+        '<div style="font-weight:800; font-size:14.5px;">'+h(o.label)+'</div>'+
+        '<div style="font-size:13px; font-weight:800; color:var(--gold2);">'+c+' ('+pct+'%)</div>'+
+      '</div>'+
+      '<div style="height:8px; border-radius:5px; background:var(--card2); margin-top:8px; overflow:hidden;">'+
+        '<div style="height:100%; width:'+pct+'%; background:var(--gold); border-radius:5px;"></div>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+  return ''+
+  '<div class="eyebrow">שאלת חימום — התוצאות</div>'+
+  '<h1 class="page-title" style="font-size:21px;">'+h(WARMUP_QUESTION)+'</h1>'+
+  '<div class="sub">'+wu.total+' משתתפים ענו</div>'+
+  '<div style="margin-top:20px;">'+rows+'</div>';
+}
+
 function viewWarmup(st){
   if(!WARMUP_OPTIONS.length){
     /* לא הוגדרה שאלת חימום ב-config.js (WARMUP_QUESTION/WARMUP_OPTIONS) —
        אין מה להציג, ממתינים בפשטות. */
     return viewLoading("ממתינים לתחילת הערב…");
+  }
+
+  if(st.warmupResultsVisible){
+    return viewWarmupResults(st);
   }
 
   var already = STATE.myWarmup != null;
@@ -339,16 +370,27 @@ function viewVoting(st){
     '</div>';
   }
 
+  /* כותרת גדולה ומודגשת שממקדת מי בעל החיים שמנחשים עליו כרגע —
+     שם השיר עצמו הוא הכותרת הראשית (H1), לא רק שורת תת-כותרת קטנה. */
   return ''+
-  '<div style="display:flex; align-items:center; justify-content:space-between;">'+
-    '<div><span class="eyebrow">ביצוע '+song.id+' מתוך 6</span></div>'+
-    '<div class="song-icon-badge" style="width:34px;height:34px;background:'+song.bg+';"><svg width="17" height="17" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
+  '<div style="display:flex; align-items:center; gap:14px;">'+
+    '<div class="song-icon-badge" style="width:58px;height:58px;background:'+song.bg+'; flex-shrink:0;"><svg width="27" height="27" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
+    '<div>'+
+      '<span class="eyebrow">ביצוע '+song.id+' מתוך 6</span>'+
+      '<h1 class="page-title" style="font-size:27px; margin-top:2px;">'+h(song.name)+'</h1>'+
+    '</div>'+
   '</div>'+
-  '<h1 class="page-title" style="font-size:20px; margin-top:8px;">מי מסתתר מאחורי המסכה?</h1>'+
-  '<div class="sub">מתחת למסכת '+h(song.name)+'</div>'+
+  '<div class="sub" style="margin-top:8px;">מי מסתתר מתחת למסכה?</div>'+
   candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
-  '<div style="margin-top:20px;">'+
-    '<button class="btn btn-gold" data-action="submit-vote" '+(STATE.selectedCandidate?'':'disabled')+'>שליחת ניחוש</button>'+
+  /* מרווח בתחתית כדי שהשורה האחרונה של המועמדים לא תיחבא מאחורי
+     סרגל השליחה הקבוע (ראו למטה). */
+  '<div style="height:84px;"></div>'+
+  /* סרגל שליחה קבוע בתחתית המסך: כשיש 20 מועמדים, כפתור השליחה
+     נשאר תמיד גלוי בלי צורך לגלול עד סוף הרשת. */
+  '<div style="position:fixed; bottom:0; left:0; right:0; display:flex; justify-content:center; background:var(--bg); border-top:1px solid var(--line); padding:14px 22px calc(14px + env(safe-area-inset-bottom, 0px)); z-index:5;">'+
+    '<div style="width:100%; max-width:416px;">'+
+      '<button class="btn btn-gold" data-action="submit-vote" '+(STATE.selectedCandidate?'':'disabled')+'>שליחת ניחוש</button>'+
+    '</div>'+
   '</div>';
 }
 
@@ -800,7 +842,14 @@ function adminMain(st){
         '<div style="font-size:34px; font-weight:900; margin-top:6px; font-variant-numeric:tabular-nums;">'+wu.total+'</div>'+
       '</div>'+
       '<div style="margin-top:20px; max-width:420px;">'+wRows+'</div>'+
-      '<div class="sub" style="margin-top:10px;">מצב שאלה: <b style="color:'+(st.warmupOpen?"var(--ok)":"var(--bad)")+';">'+(st.warmupOpen?'פתוחה':'סגורה')+'</b> — התוצאות מתעדכנות חי, ואפשר להקרין את המסך הזה לקהל.</div>'+
+      '<div class="sub" style="margin-top:10px;">מצב שאלה: <b style="color:'+(st.warmupOpen?"var(--ok)":"var(--bad)")+';">'+(st.warmupOpen?'פתוחה':'סגורה')+'</b> — התוצאות כאן מתעדכנות חי בכל מקרה, ואפשר להקרין את המסך הזה לקהל.</div>'+
+      '<div style="margin-top:18px; max-width:420px;">'+
+        '<div class="admin-h" style="margin-bottom:8px;">הצגת התוצאות במסך הקהל (בטלפונים שלהם)</div>'+
+        '<button type="button" class="btn '+(st.warmupResultsVisible?'btn-outline':'btn-gold')+'" data-action="admin-toggle-warmup-results" data-open="1">הצגת התפלגות התשובות לקהל</button>'+
+        (st.warmupResultsVisible ?
+          '<div style="margin-top:10px;"><button type="button" class="btn btn-outline" data-action="admin-toggle-warmup-results" data-open="0">הסתרת התוצאות מהקהל</button></div>'
+        : '')+
+      '</div>'+
     '</div>';
   }
   if(st.stage === "voting"){
@@ -1000,6 +1049,9 @@ function onAppClick(e){
   } else if(action === "admin-toggle-warmup"){
     if(!database) return;
     database.doc("state/admin").update({warmupOpen: el.dataset.open === "1"});
+  } else if(action === "admin-toggle-warmup-results"){
+    if(!database) return;
+    database.doc("state/admin").update({warmupResultsVisible: el.dataset.open === "1"});
   } else if(action === "lb-tab"){
     STATE.lbTab = el.dataset.tab;
     render();
@@ -1073,7 +1125,7 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now(), warmupOpen:false});
+  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
   ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -1101,7 +1153,7 @@ function subscribeAdminState(){
     if(snap.exists){
       STATE.adminState = snap.data();
     } else {
-      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, warmupOpen:false};
+      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
       if(STATE.isAdmin && !ensuredAdminDoc){
         ensuredAdminDoc = true;
         database.doc("state/admin").set(STATE.adminState);
@@ -1203,6 +1255,10 @@ function subscribeAdminExtras(){
       if(data.choice != null) counts[data.choice] = (counts[data.choice]||0) + 1;
     });
     STATE.adminWarmup = {total: snap.size, counts: counts};
+    /* כותבים את הסיכום גם ל-state/admin, כדי שכל מכשירי הקהל (שכבר
+       מאזינים למסמך הזה ממילא) יוכלו להציג את התוצאות בלי שכל טלפון
+       יצטרך לשלוח שאילתה נפרדת ל-warmupVotes בעצמו. */
+    database.doc("state/admin").update({warmupCounts: {total: snap.size, counts: counts}});
     render();
   }, function(){});
 
