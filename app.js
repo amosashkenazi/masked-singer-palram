@@ -28,6 +28,10 @@ var SONGS = window.MS_CONFIG.SONGS;
 var CANDIDATES = window.MS_CONFIG.CANDIDATES;
 var ADMIN_PIN = window.MS_CONFIG.ADMIN_PIN;
 var EVENT_NAME = window.MS_CONFIG.EVENT_NAME;
+/* מסך "ברוכים הבאים" שמוצג פעם אחת מיד אחרי הקלדת השם, לפני שאלת
+   החימום. אפשר לשנות את הנוסח דרך WELCOME_TITLE ב-config.js; אם לא
+   הוגדר שם, זו ברירת המחדל. */
+var WELCOME_TITLE = window.MS_CONFIG.WELCOME_TITLE || "ברוכים הבאים לזמר במסכה פלרם 2026";
 /* שאלת חימום אופציונלית לפני תחילת ההצבעות — אם לא הוגדרה ב-config.js,
    WARMUP_OPTIONS יהיה ריק והשלב פשוט לא יציג שום שאלה. */
 var WARMUP_QUESTION = window.MS_CONFIG.WARMUP_QUESTION || "";
@@ -140,6 +144,7 @@ function getDb(){
 var STATE = {
   connStatus: "connecting", // connecting | ok | error
   adminState: null,
+  showWelcome: false,  // true בין הכנסת השם לבין הלחיצה על "בואו נתחיל!" במסך הפתיחה
   myVotes: {},        // song -> candidate n
   myBest: null,        // song n chosen as best
   myWarmup: undefined,  // undefined=טרם נבדק מול השרת, null=נבדק ואין תשובה, מספר=התשובה שנשלחה
@@ -148,7 +153,6 @@ var STATE = {
   selectedWarmup: null,
   stats: null,         // cached aggregation
   statsLoading: false,
-  lbTab: "guessers",    // guessers | songacc | bestperf
   isAdmin: !!window.MS_DEFAULT_ADMIN, // index.html=false, admin.html=true (see בסוף הקובץ)
   adminAuthed: sessionStorage.getItem("ms_admin_authed") === "1",
   pinInput: "",
@@ -188,6 +192,8 @@ function renderAudience(){
   var inner;
   if(!name){
     inner = viewEntry();
+  } else if(STATE.showWelcome){
+    inner = viewWelcome();
   } else if(!STATE.adminState){
     inner = viewLoading("טוען את מצב האירוע…");
   } else {
@@ -197,6 +203,7 @@ function renderAudience(){
     else if(st.stage === "recap") inner = viewRecap();
     else if(st.stage === "finalVote") inner = viewFinalVote();
     else if(st.stage === "reveal") inner = viewReveal(st);
+    else if(st.stage === "podium") inner = viewPodium(st);
     else if(st.stage === "summary") inner = viewSummary(st);
     else if(st.stage === "leaderboards") inner = viewLeaderboards(st);
     else inner = viewLoading("ממתינים לתחילת הערב…");
@@ -228,6 +235,22 @@ function viewEntry(){
   '</form>'+
   '<div class="spacer"></div>'+
   '<div class="footer-note">בסריקת הקוד ובכניסה אני מאשר/ת השתתפות בתחרות הערב</div>';
+}
+
+/* מסך נחיתה שמוצג פעם אחת מיד לאחר הקלדת השם, לפני כל שלב אחר
+   (כולל שאלת החימום) — כדי לפתוח את הערב בברכת פתיחה לפני שקופצים
+   ישר לשאלה. נעלם בלחיצת הכפתור ואז ממשיכים לשלב הנוכחי כרגיל. */
+function viewWelcome(){
+  return ''+
+  '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:16vh;">'+
+    '<div style="width:88px;height:88px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+
+      '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 2-7 6v3c0 4 3 7 7 7s7-3 7-7V9c0-4-3-6-7-6Z"/><path d="M9 12h.01M15 12h.01"/></svg>'+
+    '</div>'+
+    '<h1 class="page-title" style="margin-top:20px; font-size:23px;">'+h(WELCOME_TITLE)+'</h1>'+
+    '<div class="sub" style="margin-top:10px;">מיד נתחיל בשאלת חימום קצרה לקהל</div>'+
+  '</div>'+
+  '<div class="spacer"></div>'+
+  '<button type="button" class="btn btn-gold" data-action="dismiss-welcome">בואו נתחיל!</button>';
 }
 
 function candGridHTML(list, selectedGetter, actionName){
@@ -331,6 +354,10 @@ function viewWarmup(st){
 function viewVoting(st){
   var song = songById(st.currentSong);
   var alreadyVoted = STATE.myVotes[st.currentSong] != null;
+  /* השיר האחרון בסדר ההופעות (המספר הגבוה ביותר ב-config.js) — אחריו
+     אין "ביצוע הבא", אז לא מציגים לקהל הודעת המתנה שמרמזת שיש עוד. */
+  var maxSongId = SONGS.reduce(function(m,s){ return Math.max(m, s.id); }, 0);
+  var isLastSong = song && song.id === maxSongId;
 
   if(alreadyVoted){
     var myN = STATE.myVotes[st.currentSong];
@@ -358,7 +385,7 @@ function viewVoting(st){
       '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-vote" style="width:100%;">שינוי הניחוש</button></div>'
     : '')+
     '<div class="spacer"></div>'+
-    '<div class="card2" style="display:flex; align-items:center; gap:10px; justify-content:center;"><span class="dot warn"></span><span style="font-size:13.5px; color:var(--ink-dim);">ממתינים לביצוע הבא…</span></div>';
+    (isLastSong ? '' : '<div class="card2" style="display:flex; align-items:center; gap:10px; justify-content:center;"><span class="dot warn"></span><span style="font-size:13.5px; color:var(--ink-dim);">ממתינים לביצוע הבא…</span></div>');
   }
 
   if(!st.votingOpen){
@@ -483,6 +510,9 @@ function viewReveal(st){
     '<div class="result-banner '+(isCorrect?"ok":"bad")+'">'+
       (myN==null ? "לא הצבעת על השיר הזה" : (isCorrect ? "ניחשת נכון! 🎉" : "הפעם לא ניחשת נכון"))+
     '</div>'+
+    (st.revealPct && st.revealPct[curSong] != null ?
+      '<div class="sub" style="margin-top:12px; font-weight:800; color:var(--gold2); font-size:15px;">'+st.revealPct[curSong]+'% מהקהל זיהו נכון את מי שמסתתר מתחת למסכה</div>'
+    : '')+
   '</div>'+
   '<div class="spacer"></div>'+
   (revealedList ? '<div style="display:flex; flex-direction:column; gap:6px; margin-top:14px;">'+revealedList+'</div>' : '')+
@@ -522,72 +552,89 @@ function viewSummary(st){
   '<div class="footer-note">בקרוב: לוחות התוצאות של כל האירוע</div>';
 }
 
+/* לוח התוצאות שמוצג לקהל מציג רק את המנחשים המובילים (מי זיהו הכי
+   הרבה זמרים נכון, עד 15 מקומות) — "מי זיהו הכי טוב" לפי שיר כבר
+   מוצג תוך כדי מסכי החשיפה עצמם (viewReveal), ו"הביצוע הכי טוב" מוצג
+   בנפרד, מקום אחרי מקום, במסך הפודיום הייעודי (viewPodium) — ולכן
+   שניהם לא חוזרים כאן כרשימה. */
 function viewLeaderboards(st){
   if(STATE.statsLoading || !STATE.stats){
     if(!STATE.statsLoading) loadStats(st);
-    return viewLoading("מרכיבים את הלוחות…");
+    return viewLoading("מרכיבים את הלוח…");
   }
   var stats = STATE.stats;
-  var tabs = ''+
-    '<div class="tabs">'+
-      '<button type="button" class="tab'+(STATE.lbTab==="guessers"?" active":"")+'" data-action="lb-tab" data-tab="guessers">מנחשים מובילים</button>'+
-      '<button type="button" class="tab'+(STATE.lbTab==="songacc"?" active":"")+'" data-action="lb-tab" data-tab="songacc">מי זיהו הכי טוב</button>'+
-      '<button type="button" class="tab'+(STATE.lbTab==="bestperf"?" active":"")+'" data-action="lb-tab" data-tab="bestperf">הביצוע הכי טוב</button>'+
+  var TOP_N = 15;
+  var ranked = stats.rankedParticipants.slice(0, TOP_N);
+  var rows = ranked.map(function(p,i){
+    var me = p.pid === pid;
+    return '<div class="lb-row'+(me?" me":"")+'">'+
+      '<div class="lb-rank">'+(i+1)+'</div>'+
+      '<div class="lb-avatar">'+h((p.name||"?").slice(0,2))+'</div>'+
+      '<div style="flex:1; font-size:13.5px; font-weight:700;">'+h(p.name)+(me?' (את/ה)':'')+'</div>'+
+      '<div style="font-size:12.5px; font-weight:800; color:var(--gold2);">'+p.correct+'/6</div>'+
     '</div>';
-
-  var body;
-  if(STATE.lbTab === "guessers"){
-    var ranked = stats.rankedParticipants.slice(0,10);
-    var rows = ranked.map(function(p,i){
-      var me = p.pid === pid;
-      return '<div class="lb-row'+(me?" me":"")+'">'+
-        '<div class="lb-rank">'+(i+1)+'</div>'+
-        '<div class="lb-avatar">'+h((p.name||"?").slice(0,2))+'</div>'+
-        '<div style="flex:1; font-size:13.5px; font-weight:700;">'+h(p.name)+(me?' (את/ה)':'')+'</div>'+
-        '<div style="font-size:12.5px; font-weight:800; color:var(--gold2);">'+p.correct+'/6</div>'+
-      '</div>';
-    }).join("");
-    var myEntry = stats.participants[pid];
-    var myRow = "";
-    if(myEntry && myEntry.rank > 10){
-      myRow = '<div style="text-align:center; color:var(--ink-dim); font-size:16px; margin:6px 0;">⋮</div>'+
-        '<div class="lb-row me"><div class="lb-rank">'+myEntry.rank+'</div><div class="lb-avatar">את/ה</div><div style="flex:1; font-size:13.5px; font-weight:700;">המיקום שלך</div><div style="font-size:12.5px; font-weight:800; color:var(--gold2);">'+myEntry.correct+'/6</div></div>';
-    }
-    body = '<div style="margin-top:14px;">'+rows+myRow+'</div>';
-  } else if(STATE.lbTab === "songacc"){
-    var bySongAcc = SONGS.map(function(s){
-      var d = stats.songs[s.id] || {total:0, correct:0};
-      var pct = d.total ? Math.round(100*d.correct/d.total) : 0;
-      return {s:s, pct:pct};
-    }).sort(function(a,b){ return a.pct - b.pct; });
-    body = '<div style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">'+bySongAcc.map(function(x){
-      return '<div>'+
-        '<div style="display:flex; justify-content:space-between; font-size:13px;"><span style="font-weight:800;">'+h(x.s.name)+'</span><span style="color:var(--gold2); font-weight:800;">'+x.pct+'%</span></div>'+
-        '<div class="bar-row"><div class="bar-track"><div class="bar-fill" style="width:'+x.pct+'%; background:'+x.s.stroke+';"></div></div></div>'+
-      '</div>';
-    }).join("")+'</div>';
-  } else {
-    var totalBest = 0;
-    SONGS.forEach(function(s){ totalBest += (stats.bestVotes[s.id]||0); });
-    var byBest = SONGS.map(function(s){
-      var cnt = stats.bestVotes[s.id]||0;
-      var pct = totalBest ? Math.round(100*cnt/totalBest) : 0;
-      return {s:s, pct:pct};
-    }).sort(function(a,b){ return b.pct - a.pct; });
-    body = '<div style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">'+byBest.map(function(x){
-      return '<div>'+
-        '<div style="display:flex; justify-content:space-between; font-size:13px;"><span style="font-weight:800;">'+h(x.s.name)+'</span><span style="color:var(--gold2); font-weight:800;">'+x.pct+'%</span></div>'+
-        '<div class="bar-row"><div class="bar-track"><div class="bar-fill" style="width:'+x.pct+'%; background:'+x.s.stroke+';"></div></div></div>'+
-      '</div>';
-    }).join("")+'</div>';
+  }).join("");
+  var myEntry = stats.participants[pid];
+  var myRow = "";
+  if(myEntry && myEntry.rank > TOP_N){
+    myRow = '<div style="text-align:center; color:var(--ink-dim); font-size:16px; margin:6px 0;">⋮</div>'+
+      '<div class="lb-row me"><div class="lb-rank">'+myEntry.rank+'</div><div class="lb-avatar">את/ה</div><div style="flex:1; font-size:13.5px; font-weight:700;">המיקום שלך</div><div style="font-size:12.5px; font-weight:800; color:var(--gold2);">'+myEntry.correct+'/6</div></div>';
   }
 
   return ''+
-  '<div class="eyebrow">לוחות תוצאות</div>'+
-  '<h1 class="page-title" style="font-size:21px;">כל התוצאות של הערב</h1>'+
-  '<div style="margin-top:16px;">'+tabs+'</div>'+
-  body+
+  '<div class="eyebrow">לוח תוצאות</div>'+
+  '<h1 class="page-title" style="font-size:21px;">'+TOP_N+' המנחשים המובילים של הערב</h1>'+
+  '<div style="margin-top:16px;">'+rows+myRow+'</div>'+
   '<div style="margin-top:20px;"><button class="btn btn-outline" data-action="refresh-stats">רענון נתונים</button></div>';
+}
+
+/* ===================== פודיום — הביצוע הכי טוב (מקום 3, 2, 1) ===================== */
+
+/* מציגה לקהל מקום אחד בכל פעם (שלישי → שני → ראשון), לפי podiumStep
+   ב-state/admin שהמנהל/ת שולט/ת בו — בדיוק כמו רצף החשיפות, כדי
+   ליצור רגע דרמטי במקום להציג את כל הדירוג כרשימה אחת. הדירוג עצמו
+   מחושב מתוך אותה הצבעת "best" (bestVotes) שכבר נאספת ב-loadStats. */
+function viewPodium(st){
+  if(STATE.statsLoading || !STATE.stats){
+    if(!STATE.statsLoading) loadStats(st);
+    return viewLoading("סופרים הצבעות…");
+  }
+  var stats = STATE.stats;
+  var ranked = SONGS.map(function(s){ return {s:s, cnt: stats.bestVotes[s.id]||0}; })
+    .sort(function(a,b){ return b.cnt - a.cnt; });
+  var totalBest = ranked.reduce(function(sum,x){ return sum + x.cnt; }, 0);
+
+  var step = st.podiumStep || 0;
+  if(!step){
+    return ''+
+    '<div style="margin-top:18vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+      '<div class="eyebrow">הביצוע הכי טוב של הערב</div>'+
+      '<h1 class="page-title" style="font-size:21px; margin-top:6px;">מיד חושפים את הזוכים…</h1>'+
+      '<div class="sub">עקבו אחרי המסך הראשי באולם</div>'+
+    '</div>';
+  }
+
+  var placeMap = {1:{idx:2,label:"מקום שלישי 🥉"}, 2:{idx:1,label:"מקום שני 🥈"}, 3:{idx:0,label:"מקום ראשון 🏆"}};
+  var cur = placeMap[step] || placeMap[3];
+  var entry = ranked[cur.idx];
+  if(!entry){
+    return viewLoading("אין מספיק נתונים כדי להציג את הפודיום…");
+  }
+  var s = entry.s;
+  var pct = totalBest ? Math.round(100*entry.cnt/totalBest) : 0;
+  var badgeInner = s.costumePhoto ?
+    '<img src="'+h(s.costumePhoto)+'" alt="'+h(s.name)+'" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+    '<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;"><svg width="46" height="46" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></span>'
+  : '<svg width="46" height="46" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg>';
+
+  return ''+
+  '<div style="text-align:center; margin-top:6vh;">'+
+    '<div class="eyebrow">הביצוע הכי טוב של הערב</div>'+
+    '<h1 class="page-title" style="margin-top:6px;">'+cur.label+'</h1>'+
+    '<div class="hero-avatar" style="width:150px;height:150px;margin-top:22px;border:3px solid var(--gold); background:'+s.bg+'; overflow:hidden;">'+badgeInner+'</div>'+
+    '<h1 class="page-title" style="margin-top:20px;">'+h(s.name)+'</h1>'+
+    '<div class="sub">'+entry.cnt+' קולות · '+pct+'% מההצבעות</div>'+
+  '</div>';
 }
 
 /* ===================== STATS AGGREGATION ===================== */
@@ -702,6 +749,7 @@ function doComputeRevealOrder(database, answerKey){
     return database.collection("votes").where("song","==",sid).limit(1000).get();
   })).then(function(snaps){
     var pct = {};
+    var pctPercent = {}; // אותו נתון, מעוגל לאחוזים שלמים — נשמר ב-state/admin כדי שהקהל יוכל להציג אותו בכל מסך חשיפה בלי שאילתה נוספת
     snaps.forEach(function(snap, idx){
       var sid = songIds[idx];
       var total = snap.size, correct = 0;
@@ -710,9 +758,10 @@ function doComputeRevealOrder(database, answerKey){
         if(data.candidate === answerKey[sid]) correct++;
       });
       pct[sid] = total ? correct/total : 0;
+      pctPercent[sid] = Math.round(pct[sid]*100);
     });
     var order = songIds.slice().sort(function(a,b){ return pct[b]-pct[a]; });
-    database.doc("state/admin").update({answerKey:answerKey, revealOrder:order});
+    database.doc("state/admin").update({answerKey:answerKey, revealOrder:order, revealPct:pctPercent});
   });
 }
 
@@ -779,6 +828,7 @@ function adminSidebar(st){
         stageBtn("תזכורת (Recap)", st.stage==="recap", "admin-set-stage", 'data-stage="recap"')+
         stageBtn("הצבעה לביצוע הכי טוב", st.stage==="finalVote", "admin-set-stage", 'data-stage="finalVote"')+
         stageBtn("רצף חשיפות", st.stage==="reveal", "admin-set-stage", 'data-stage="reveal"')+
+        stageBtn("פודיום — הביצוע הכי טוב", st.stage==="podium", "admin-set-stage", 'data-stage="podium"')+
         stageBtn("סיכום אישי לקהל", st.stage==="summary", "admin-set-stage", 'data-stage="summary"')+
         stageBtn("לוחות תוצאות", st.stage==="leaderboards", "admin-set-stage", 'data-stage="leaderboards"')+
       '</div>'+
@@ -928,6 +978,40 @@ function adminMain(st){
     '</div>';
   }
 
+  if(st.stage === "podium"){
+    if(STATE.statsLoading || !STATE.stats){
+      if(!STATE.statsLoading) loadStats(st);
+      return '<div class="admin-main">'+viewLoading("סופרים הצבעות…")+'</div>';
+    }
+    var pStats = STATE.stats;
+    var pRanked = SONGS.map(function(s){ return {s:s, cnt: pStats.bestVotes[s.id]||0}; }).sort(function(a,b){ return b.cnt - a.cnt; });
+    var pTotal = pRanked.reduce(function(sum,x){ return sum + x.cnt; }, 0);
+    var pRows = pRanked.map(function(x,i){
+      var pct = pTotal ? Math.round(100*x.cnt/pTotal) : 0;
+      return '<div class="row-card">'+
+        '<div style="width:26px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
+        '<div class="song-icon-badge" style="background:'+x.s.bg+';"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" stroke="'+x.s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+x.s.path+'</svg></div>'+
+        '<div style="flex:1; font-weight:700; font-size:13.5px;">'+h(x.s.name)+'</div>'+
+        '<div style="font-size:12px; font-weight:800; color:var(--gold2);">'+x.cnt+' ('+pct+'%)</div>'+
+      '</div>';
+    }).join("");
+    var pStep = st.podiumStep || 0;
+    var pStatusLabel = pStep===0 ? "טרם נחשף דבר" : (pStep===1 ? "מקום שלישי גלוי לקהל" : (pStep===2 ? "מקום שני גלוי לקהל" : "מקום ראשון גלוי לקהל"));
+    return '<div class="admin-main">'+
+      '<div class="admin-h">פודיום — הביצוע הכי טוב</div>'+
+      '<h1 class="page-title">חשיפת הזוכים לקהל</h1>'+
+      '<div class="sub">הדירוג המלא כאן גלוי רק לך. לוחצים בסדר — שלישי, שני, ראשון — כדי לחשוף לקהל מקום אחרי מקום, כל אחד במסך נפרד.</div>'+
+      '<div style="margin-top:16px; max-width:420px;">'+pRows+'</div>'+
+      '<div style="display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;">'+
+        '<button class="btn '+(pStep===1?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-podium-step" data-step="1">חשיפת מקום שלישי</button>'+
+        '<button class="btn '+(pStep===2?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-podium-step" data-step="2">חשיפת מקום שני</button>'+
+        '<button class="btn '+(pStep===3?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-podium-step" data-step="3">חשיפת מקום ראשון</button>'+
+        '<button class="btn btn-outline" style="width:auto; padding:14px 18px; color:var(--bad); border-color:rgba(226,131,111,.4);" data-action="admin-podium-step" data-step="0">איפוס פודיום</button>'+
+      '</div>'+
+      '<div class="sub" style="margin-top:14px;">מצב נוכחי בקהל: <b style="color:var(--gold2);">'+pStatusLabel+'</b></div>'+
+    '</div>';
+  }
+
   var stageLabels = {warmup:"שאלת חימום לקהל", recap:"תזכורת לקהל", finalVote:"הצבעה לביצוע הכי טוב", summary:"סיכום אישי לקהל", leaderboards:"לוחות תוצאות לקהל"};
   return '<div class="admin-main">'+
     '<div class="admin-h">שלב נוכחי</div>'+
@@ -960,6 +1044,7 @@ function bindActions(){
       if(!v) return;
       setParticipantName(v);
       ensureParticipantDoc();
+      STATE.showWelcome = true;
       render();
     });
   }
@@ -1052,9 +1137,6 @@ function onAppClick(e){
   } else if(action === "admin-toggle-warmup-results"){
     if(!database) return;
     database.doc("state/admin").update({warmupResultsVisible: el.dataset.open === "1"});
-  } else if(action === "lb-tab"){
-    STATE.lbTab = el.dataset.tab;
-    render();
   } else if(action === "refresh-stats"){
     STATE.stats = null;
     render();
@@ -1066,6 +1148,9 @@ function onAppClick(e){
   } else if(action === "goto-audience"){
     STATE.isAdmin = false;
     try{ history.replaceState(null, "", location.pathname + location.search); }catch(err){}
+    render();
+  } else if(action === "dismiss-welcome"){
+    STATE.showWelcome = false;
     render();
   }
 
@@ -1104,7 +1189,10 @@ function onAppClick(e){
     database.doc("state/admin").update(patch2);
   } else if(action === "admin-reveal-order-reset"){
     if(!database) return;
-    database.doc("state/admin").update({revealOrder:null, correctAnswers:{}, currentRevealSong:null});
+    database.doc("state/admin").update({revealOrder:null, correctAnswers:{}, currentRevealSong:null, revealPct:null});
+  } else if(action === "admin-podium-step"){
+    if(!database) return;
+    database.doc("state/admin").update({podiumStep: Number(el.dataset.step)});
   } else if(action === "admin-reset"){
     STATE.confirmModal = {
       text: "לאפס את כל האירוע (שלבים, הצבעות ומשתתפים) למצב בדיקה? הפעולה בלתי הפיכה.",
@@ -1125,7 +1213,7 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
+  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
   ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -1153,7 +1241,7 @@ function subscribeAdminState(){
     if(snap.exists){
       STATE.adminState = snap.data();
     } else {
-      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
+      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
       if(STATE.isAdmin && !ensuredAdminDoc){
         ensuredAdminDoc = true;
         database.doc("state/admin").set(STATE.adminState);
