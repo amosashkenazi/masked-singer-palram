@@ -477,7 +477,7 @@ function viewFinalVote(){
 function viewReveal(st){
   var ca = st.correctAnswers || {};
   var curSong = st.currentRevealSong;
-  if(!curSong || ca[curSong] == null){
+  if(!curSong){
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       '<div class="eyebrow">שלב החשיפות</div>'+
@@ -485,7 +485,22 @@ function viewReveal(st){
       '<div class="sub">עקבו אחרי המסך הראשי באולם</div>'+
     '</div>';
   }
-  var song = songById(curSong);
+  var songTeaser = songById(curSong);
+  if(ca[curSong] == null){
+    /* "הוכרז" — הבקר/ית סימנ/ה מי הביצוע הבא, אבל התשובה עצמה עדיין
+       לא נחשפת לקהל. זה הרגע של המנחה/ה על הבמה: אומר/ת בקול מי
+       עומדים לחשוף עכשיו, אולי אפילו שואל/ת את הקהל לנחש בקול רם —
+       ורק אחרי זה, בלחיצה נפרדת של הבקר/ית, המסך הזה יתחלף בתשובה
+       בפועל. */
+    return ''+
+    '<div style="text-align:center; margin-top:10vh;">'+
+      '<div class="eyebrow">חשיפה הבאה</div>'+
+      '<div class="song-icon-badge" style="width:96px;height:96px;margin:22px auto 0;background:'+songTeaser.bg+';"><svg width="42" height="42" viewBox="0 0 40 40" fill="none" stroke="'+songTeaser.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+songTeaser.path+'</svg></div>'+
+      '<h1 class="page-title" style="margin-top:20px;">ביצוע '+songTeaser.id+' · '+h(songTeaser.name)+'</h1>'+
+      '<div class="sub" style="margin-top:8px;">מי מסתתר מתחת למסכה הזו?<br>עקבו אחרי המנחה/ה על הבמה…</div>'+
+    '</div>';
+  }
+  var song = songTeaser;
   var correctN = ca[curSong];
   var correctC = candByN(correctN);
   var myN = STATE.myVotes[curSong];
@@ -950,16 +965,26 @@ function adminMain(st){
       '</div>';
     }
 
-    /* ---- phase B: sequential reveal in the computed order ---- */
+    /* ---- phase B: sequential reveal in the computed order ----
+       שני צעדים נפרדים לכל ביצוע, כדי להתאים לקצב של המנחה/ה על
+       הבמה ולא של הבקר/ית מאחורי המסך:
+         1) "הכרזה" — מסמנים איזה ביצוע עולה עכשיו; מסך הקהל מציג רק
+            את שם/אייקון הביצוע ("מי מסתתר מתחת למסכה הזו?"), בלי
+            התשובה, כדי שהמנחה/ה יוכל/תוכל להגיד את זה בקול ולתת
+            לקהל לנחש בקול רם.
+         2) "חשיפת התשובה" — לחיצה נפרדת שרק אחריה מסך הקהל מתחלף
+            ומראה בפועל מי הסתתר מתחת למסכה. */
     var ca = st.correctAnswers || {};
-    var nextSong = order.filter(function(s){ return ca[s] == null; })[0];
+    var pendingSong = (st.currentRevealSong != null && ca[st.currentRevealSong] == null) ? st.currentRevealSong : null;
+    var nextToAnnounce = pendingSong == null ? order.filter(function(s){ return ca[s] == null; })[0] : null;
     var rows2 = order.map(function(sid, i){
       var s = songById(sid);
       var c = candByN(st.answerKey[sid]);
       var revealed = ca[sid] != null;
-      var isNext = sid === nextSong;
-      var statusLabel = revealed ? "נחשף" : (isNext ? "הבא בתור" : "ממתין");
-      return '<div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;'+(isNext?'border-color:var(--gold);':'')+(revealed?'opacity:.6;':'')+'">'+
+      var isPending = sid === pendingSong;
+      var isNext = sid === nextToAnnounce;
+      var statusLabel = revealed ? "נחשף לקהל" : (isPending ? "הוכרז — ממתין לחשיפה" : (isNext ? "הבא בתור" : "ממתין"));
+      return '<div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;'+((isPending||isNext)?'border-color:var(--gold);':'')+(revealed?'opacity:.6;':'')+'">'+
         '<div style="width:24px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
         '<div class="song-icon-badge" style="background:'+s.bg+';"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></div>'+
         '<div style="flex:1;"><div style="font-weight:800; font-size:13.5px;">'+s.id+' · '+h(s.name)+'</div><div style="font-size:11.5px; color:var(--ink-dim);">'+(c?h(c.name):'')+'</div></div>'+
@@ -969,12 +994,16 @@ function adminMain(st){
     return '<div class="admin-main">'+
       '<div class="admin-h">רצף חשיפות · שלב 2</div>'+
       '<h1 class="page-title">סדר החשיפה (מהזיהוי הגבוה ביותר לנמוך ביותר)</h1>'+
-      '<div class="sub">הסדר חושב אוטומטית לפי אחוז הקהל שזיהה נכון כל ביצוע. בכל לחיצה על "חשוף את הבא", כל הקהל רואה מיידית אם ניחש נכון.</div>'+
+      '<div class="sub">הסדר חושב אוטומטית לפי אחוז הקהל שזיהה נכון כל ביצוע. לכל ביצוע שני כפתורים: "הכרזה" מציגה לקהל רק איזה ביצוע עולה עכשיו (בלי התשובה) כדי שהמנחה/ה יגיד/תגיד את זה בקול; "חשיפת התשובה" היא לחיצה נפרדת שרק אחריה הקהל רואה בפועל מי הסתתר מתחת למסכה.</div>'+
       '<div style="margin-top:20px; max-width:640px;">'+rows2+'</div>'+
-      '<div style="display:flex; gap:12px; max-width:640px;">'+
-        '<button class="btn btn-gold" data-action="admin-reveal-next" '+(nextSong==null?'disabled':'')+'>'+(nextSong==null?'כל הביצועים נחשפו':'חשוף את הבא')+'</button>'+
-        '<button class="btn btn-outline" style="width:auto; padding:14px 18px;" data-action="admin-reveal-order-reset">חשב מחדש</button>'+
+      (pendingSong != null ?
+        '<div class="card2" style="display:flex; align-items:center; gap:10px; padding:12px 16px; max-width:640px; margin-bottom:12px;"><span class="dot warn"></span><span style="font-size:13px;">הוכרז לקהל: '+h(songById(pendingSong).name)+' — ממתין ללחיצה על "חשיפת התשובה"</span></div>'
+      : '')+
+      '<div style="display:flex; gap:12px; max-width:640px; flex-wrap:wrap;">'+
+        '<button class="btn btn-outline" data-action="admin-reveal-announce" '+(nextToAnnounce==null?'disabled':'')+'>'+(nextToAnnounce==null?(pendingSong!=null?'ביצוע הבא כבר הוכרז':'כל הביצועים הוכרזו'):'הכרזה על הביצוע הבא — '+h(songById(nextToAnnounce).name))+'</button>'+
+        '<button class="btn btn-gold" data-action="admin-reveal-confirm" '+(pendingSong==null?'disabled':'')+'>חשיפת התשובה לקהל</button>'+
       '</div>'+
+      '<div style="margin-top:14px;"><button class="btn btn-outline" style="width:auto; padding:12px 16px;" data-action="admin-reveal-order-reset">חשב מחדש</button></div>'+
     '</div>';
   }
 
@@ -1176,17 +1205,29 @@ function onAppClick(e){
     database.doc("state/admin").update({stage: el.dataset.stage});
   } else if(action === "admin-compute-order"){
     adminComputeRevealOrder();
-  } else if(action === "admin-reveal-next"){
+  } else if(action === "admin-reveal-announce"){
+    /* צעד 1: מסמנים לקהל איזה ביצוע עולה עכשיו, בלי לגלות את
+       התשובה — כדי לתת למנחה/ה של הערב את הרגע להגיד את זה בקול. */
     if(!database) return;
-    var stt = STATE.adminState;
-    var ordr = stt.revealOrder || [];
-    var caNow = stt.correctAnswers || {};
-    var nextS = ordr.filter(function(s){ return caNow[s] == null; })[0];
-    if(nextS == null) return;
-    var patch2 = {currentRevealSong: nextS};
-    patch2.correctAnswers = {};
-    patch2.correctAnswers[nextS] = stt.answerKey[nextS];
-    database.doc("state/admin").update(patch2);
+    var sttA = STATE.adminState;
+    var ordrA = sttA.revealOrder || [];
+    var caA = sttA.correctAnswers || {};
+    var pendingA = (sttA.currentRevealSong != null && caA[sttA.currentRevealSong] == null) ? sttA.currentRevealSong : null;
+    if(pendingA != null) return; // כבר יש הכרזה שממתינה לחשיפה — לא מכריזים על הבא לפני שמסיימים איתה
+    var nextA = ordrA.filter(function(s){ return caA[s] == null; })[0];
+    if(nextA == null) return;
+    database.doc("state/admin").update({currentRevealSong: nextA});
+  } else if(action === "admin-reveal-confirm"){
+    /* צעד 2: לחיצה נפרדת שרק אחריה מסך הקהל מתחלף ומראה בפועל מי
+       הסתתר מתחת למסכה שהוכרזה. */
+    if(!database) return;
+    var sttC = STATE.adminState;
+    var pendingC = sttC.currentRevealSong;
+    var caC = sttC.correctAnswers || {};
+    if(pendingC == null || caC[pendingC] != null) return;
+    var patchC = {correctAnswers:{}};
+    patchC.correctAnswers[pendingC] = sttC.answerKey[pendingC];
+    database.doc("state/admin").update(patchC);
   } else if(action === "admin-reveal-order-reset"){
     if(!database) return;
     database.doc("state/admin").update({revealOrder:null, correctAnswers:{}, currentRevealSong:null, revealPct:null});
