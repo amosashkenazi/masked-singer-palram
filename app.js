@@ -144,7 +144,7 @@ function getDb(){
 var STATE = {
   connStatus: "connecting", // connecting | ok | error
   adminState: null,
-  showWelcome: false,  // true בין הכנסת השם לבין הלחיצה על "בואו נתחיל!" במסך הפתיחה
+  showWelcome: false,  // true למשך כמה שניות מיד אחרי הקלדת השם, בזמן שמסך הפתיחה מוצג
   myVotes: {},        // song -> candidate n
   myBest: null,        // song n chosen as best
   myWarmup: undefined,  // undefined=טרם נבדק מול השרת, null=נבדק ואין תשובה, מספר=התשובה שנשלחה
@@ -237,20 +237,20 @@ function viewEntry(){
   '<div class="footer-note">בסריקת הקוד ובכניסה אני מאשר/ת השתתפות בתחרות הערב</div>';
 }
 
-/* מסך נחיתה שמוצג פעם אחת מיד לאחר הקלדת השם, לפני כל שלב אחר
-   (כולל שאלת החימום) — כדי לפתוח את הערב בברכת פתיחה לפני שקופצים
-   ישר לשאלה. נעלם בלחיצת הכפתור ואז ממשיכים לשלב הנוכחי כרגיל. */
+/* מסך נחיתה שמוצג פעם אחת מיד לאחר הקלדת השם, לפני כל שלב אחר (כולל
+   שאלת החימום) — כדי לפתוח את הערב בברכת פתיחה לפני שקופצים ישר
+   לשאלה. אין כאן כפתור להמשך — המסך נעלם לבד אחרי כמה שניות (ראו
+   ה-setTimeout ב-bindActions, submit של entry-form) וממשיכים לשלב
+   הנוכחי כרגיל. */
 function viewWelcome(){
   return ''+
-  '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:16vh;">'+
+  '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:18vh;">'+
     '<div style="width:88px;height:88px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+
       '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 2-7 6v3c0 4 3 7 7 7s7-3 7-7V9c0-4-3-6-7-6Z"/><path d="M9 12h.01M15 12h.01"/></svg>'+
     '</div>'+
     '<h1 class="page-title" style="margin-top:20px; font-size:23px;">'+h(WELCOME_TITLE)+'</h1>'+
     '<div class="sub" style="margin-top:10px;">מיד נתחיל בשאלת חימום קצרה לקהל</div>'+
-  '</div>'+
-  '<div class="spacer"></div>'+
-  '<button type="button" class="btn btn-gold" data-action="dismiss-welcome">בואו נתחיל!</button>';
+  '</div>';
 }
 
 function candGridHTML(list, selectedGetter, actionName){
@@ -1075,6 +1075,12 @@ function bindActions(){
       ensureParticipantDoc();
       STATE.showWelcome = true;
       render();
+      /* בלי כפתור "בואו נתחיל" — מסך הפתיחה נעלם לבד אחרי כמה שניות
+         וממשיכים אוטומטית לשלב הנוכחי (למשל שאלת החימום). */
+      setTimeout(function(){
+        STATE.showWelcome = false;
+        render();
+      }, 2600);
     });
   }
 
@@ -1177,9 +1183,6 @@ function onAppClick(e){
   } else if(action === "goto-audience"){
     STATE.isAdmin = false;
     try{ history.replaceState(null, "", location.pathname + location.search); }catch(err){}
-    render();
-  } else if(action === "dismiss-welcome"){
-    STATE.showWelcome = false;
     render();
   }
 
