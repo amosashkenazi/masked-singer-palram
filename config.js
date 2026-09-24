@@ -1,7 +1,8 @@
 window.MS_CONFIG = {
 
   EVENT_NAME: "נופש החברה 2026",
-
+LOGO_URL: "LOGO.jpg",
+  
   ADMIN_PIN: "2026",
   WARMUP_QUESTION: "מי התלבש יותר יפה הערב?",
   WARMUP_OPTIONS: [
