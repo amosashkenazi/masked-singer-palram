@@ -124,6 +124,25 @@ function brandMarkHTML(boxSize, iconSize){
   return '<div style="width:'+boxSize+'px;height:'+boxSize+'px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+maskIcon+'</div>';
 }
 
+/* התג העגול של שיר/חיה — מציג את תמונת התחפושת האמיתית (song.costumePhoto
+   ב-config.js) כשהיא הוגדרה, ואם לא, או שהיא נכשלת בטעינה, נופל חזרה
+   לאייקון המצויר האוטומטי (song.path/bg/stroke), בדיוק כמו avatarHTML.
+   תמונת התחפושת היא תמונה של הבגד/החיה עצמה, לא של מי שמסתתר מתחתיה —
+   לכן אין שום בעיה להציג אותה גם במסכי הניחוש (השאלה שם היא מי לובש
+   את התחפושת, לא איך היא נראית). size קובע גם רוחב/גובה וגם גודל
+   האייקון המצויר הפנימי, יחסית אליו. */
+function songBadgeHTML(song, size){
+  var iconSize = Math.round(size*0.46);
+  var icon = '<svg width="'+iconSize+'" height="'+iconSize+'" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg>';
+  if(song.costumePhoto){
+    return '<div class="song-icon-badge" style="width:'+size+'px;height:'+size+'px;background:'+song.bg+';overflow:hidden;">'+
+      '<img src="'+h(song.costumePhoto)+'" alt="'+h(song.name)+'" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+      '<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">'+icon+'</span>'+
+    '</div>';
+  }
+  return '<div class="song-icon-badge" style="width:'+size+'px;height:'+size+'px;background:'+song.bg+';">'+icon+'</div>';
+}
+
 /* ===================== שעון עצר להצבעה ===================== */
 
 /* כמה שניות נותרו להצבעה הנוכחית, לפי votingOpenedAt שנשמר ב-state/admin
@@ -472,7 +491,7 @@ function viewVoting(st){
   if(!st.votingOpen){
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
-      '<div class="song-icon-badge" style="width:70px;height:70px;background:'+song.bg+';"><svg width="30" height="30" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
+      songBadgeHTML(song,70)+
       '<h1 class="page-title" style="margin-top:18px; font-size:26px;">ההצבעה עוד לא נפתחה</h1>'+
       '<div class="sub">ביצוע '+song.id+' מתוך 6 · '+h(song.name)+'<br>ההצבעה תיפתח מיד לאחר סיום השיר</div>'+
     '</div>';
@@ -482,7 +501,7 @@ function viewVoting(st){
      שם השיר עצמו הוא הכותרת הראשית (H1), לא רק שורת תת-כותרת קטנה. */
   return ''+
   '<div style="display:flex; align-items:center; gap:14px;">'+
-    '<div class="song-icon-badge" style="width:58px;height:58px;background:'+song.bg+'; flex-shrink:0;"><svg width="27" height="27" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
+    songBadgeHTML(song,58)+
     '<div>'+
       '<span class="eyebrow">ביצוע '+song.id+' מתוך 6</span>'+
       '<h1 class="page-title" style="font-size:32px; margin-top:2px;">'+h(song.name)+'</h1>'+
@@ -506,7 +525,7 @@ function viewVoting(st){
 function viewRecap(){
   var rows = SONGS.map(function(s){
     return '<div class="row-card">'+
-      '<div class="song-icon-badge" style="background:'+s.bg+';"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></div>'+
+      songBadgeHTML(s,40)+
       '<div style="flex:1; font-weight:700; font-size:14.5px;">'+h(s.name)+'</div>'+
       '<div style="width:26px;height:26px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gold2);">'+s.id+'</div>'+
     '</div>';
@@ -536,15 +555,8 @@ function viewFinalVote(){
   }
   var cards = SONGS.map(function(s){
     var sel = STATE.selectedBest === s.id;
-    /* אם הוגדרה תמונת תחפושת לשיר הזה (song.costumePhoto ב-config.js),
-       מציגים אותה במקום האייקון המצויר; אם התמונה נכשלת בטעינה,
-       נופלים חזרה לאייקון המצויר (בדיוק כמו avatarHTML). */
-    var badgeInner = s.costumePhoto ?
-      '<img src="'+h(s.costumePhoto)+'" alt="'+h(s.name)+'" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
-      '<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></span>'
-    : '<svg width="26" height="26" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg>';
     return '<button type="button" class="card2" data-action="pick-best" data-n="'+s.id+'" style="display:flex;flex-direction:column;align-items:center;gap:8px;'+(sel?'border-color:var(--gold);background:rgba(224,178,88,.12);':'')+'">'+
-      '<div class="song-icon-badge" style="width:64px;height:64px;background:'+s.bg+';overflow:hidden;">'+badgeInner+'</div>'+
+      songBadgeHTML(s,64)+
       '<div style="font-size:12.5px; font-weight:800;">'+h(s.name)+' · '+s.id+'</div>'+
     '</button>';
   }).join("");
