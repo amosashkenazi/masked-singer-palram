@@ -32,6 +32,12 @@ var EVENT_NAME = window.MS_CONFIG.EVENT_NAME;
    החימום. אפשר לשנות את הנוסח דרך WELCOME_TITLE ב-config.js; אם לא
    הוגדר שם, זו ברירת המחדל. */
 var WELCOME_TITLE = window.MS_CONFIG.WELCOME_TITLE || "ברוכים הבאים לזמר במסכה פלרם 2026";
+/* לוגו פלרם (אופציונלי) — מציגים אותו במסך הכניסה ובמסך "ברוכים
+   הבאים" במקום את אייקון המסכה המצויר. מוגדר ב-config.js תחת
+   LOGO_URL, למשל: LOGO_URL: "logo.png" (קובץ שמעלים ל-GitHub, אותו
+   דבר בדיוק כמו תמונות המועמדים ב-photos/). אם לא הוגדר, או שהקובץ
+   נכשל בטעינה, נופלים אוטומטית בחזרה לאייקון המצויר. */
+var LOGO_URL = window.MS_CONFIG.LOGO_URL || "";
 /* שאלת חימום אופציונלית לפני תחילת ההצבעות — אם לא הוגדרה ב-config.js,
    WARMUP_OPTIONS יהיה ריק והשלב פשוט לא יציג שום שאלה. */
 var WARMUP_QUESTION = window.MS_CONFIG.WARMUP_QUESTION || "";
@@ -97,6 +103,20 @@ function avatarHTML(c, size){
     '</span>';
   }
   return makeFaceSVG(c, size);
+}
+
+/* מציגה את לוגו פלרם (LOGO_URL ב-config.js) בתוך עיגול במסך הכניסה
+   ובמסך "ברוכים הבאים" — ואם לא הוגדר לוגו, או שהקובץ נכשל בטעינה,
+   נופלת אוטומטית בחזרה לאייקון המסכה המצויר, בדיוק כמו avatarHTML. */
+function brandMarkHTML(boxSize, iconSize){
+  var maskIcon = '<svg width="'+iconSize+'" height="'+iconSize+'" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 2-7 6v3c0 4 3 7 7 7s7-3 7-7V9c0-4-3-6-7-6Z"/><path d="M9 12h.01M15 12h.01"/></svg>';
+  if(LOGO_URL){
+    return '<div style="width:'+boxSize+'px;height:'+boxSize+'px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;">'+
+      '<img src="'+h(LOGO_URL)+'" alt="פלרם" style="width:76%;height:76%;object-fit:contain;display:block;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+      '<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">'+maskIcon+'</span>'+
+    '</div>';
+  }
+  return '<div style="width:'+boxSize+'px;height:'+boxSize+'px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+maskIcon+'</div>';
 }
 
 function uid(){
@@ -222,9 +242,7 @@ function viewLoading(msg){
 function viewEntry(){
   return ''+
   '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:14vh;">'+
-    '<div style="width:78px;height:78px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+
-      '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 2-7 6v3c0 4 3 7 7 7s7-3 7-7V9c0-4-3-6-7-6Z"/><path d="M9 12h.01M15 12h.01"/></svg>'+
-    '</div>'+
+    brandMarkHTML(78,34)+
     '<div class="eyebrow" style="margin-top:16px;">'+h(EVENT_NAME)+'</div>'+
     '<h1 class="page-title">הזמר<br>במסכה</h1>'+
     '<div class="sub">כדי להצטרף, הזינו את שמכם — נצטרך אותו כדי לשמור את הניחושים והתוצאה האישית שלכם בסוף הערב.</div>'+
@@ -245,9 +263,7 @@ function viewEntry(){
 function viewWelcome(){
   return ''+
   '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:18vh;">'+
-    '<div style="width:88px;height:88px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+
-      '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 2-7 6v3c0 4 3 7 7 7s7-3 7-7V9c0-4-3-6-7-6Z"/><path d="M9 12h.01M15 12h.01"/></svg>'+
-    '</div>'+
+    brandMarkHTML(88,38)+
     '<h1 class="page-title" style="margin-top:20px; font-size:23px;">'+h(WELCOME_TITLE)+'</h1>'+
     '<div class="sub" style="margin-top:10px;">מיד נתחיל בשאלת חימום קצרה לקהל</div>'+
   '</div>';
