@@ -38,6 +38,11 @@ var WELCOME_TITLE = window.MS_CONFIG.WELCOME_TITLE || "ברוכים הבאים �
    דבר בדיוק כמו תמונות המועמדים ב-photos/). אם לא הוגדר, או שהקובץ
    נכשל בטעינה, נופלים אוטומטית בחזרה לאייקון המצויר. */
 var LOGO_URL = window.MS_CONFIG.LOGO_URL || "";
+/* משך ההצבעה (בשניות) על כל אחד מששת הביצועים — לאחר שהמנהל/ת פותח/ת
+   הצבעה, שעון עצר רץ לקהל ולמנהל/ת, ובתום הזמן ההצבעה ננעלת אוטומטית
+   (ראו votingTicker בהמשך הקובץ). אפשר לשנות ב-config.js תחת
+   VOTING_DURATION_SEC בלי לגעת בקוד. */
+var VOTING_DURATION_SEC = window.MS_CONFIG.VOTING_DURATION_SEC || 60;
 /* שאלת חימום אופציונלית לפני תחילת ההצבעות — אם לא הוגדרה ב-config.js,
    WARMUP_OPTIONS יהיה ריק והשלב פשוט לא יציג שום שאלה. */
 var WARMUP_QUESTION = window.MS_CONFIG.WARMUP_QUESTION || "";
@@ -119,6 +124,61 @@ function brandMarkHTML(boxSize, iconSize){
   return '<div style="width:'+boxSize+'px;height:'+boxSize+'px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;">'+maskIcon+'</div>';
 }
 
+/* ===================== שעון עצר להצבעה ===================== */
+
+function formatCountdown(sec){
+  sec = Math.max(0, Math.round(sec));
+  var m = Math.floor(sec/60);
+  var s = sec % 60;
+  return m + ":" + (s<10?"0":"") + s;
+}
+
+/* כמה שניות נותרו להצבעה הנוכחית, לפי votingOpenedAt שנשמר ב-state/admin
+   כשההצבעה נפתחה. מחזירה null אם ההצבעה לא פתוחה או שאין זמן פתיחה
+   שמור (למשל הצבעה שנפתחה בגרסה ישנה של הקוד, לפני התוספת הזו). */
+function votingSecondsLeft(st){
+  if(!st || !st.votingOpen || !st.votingOpenedAt) return null;
+  var elapsedSec = (Date.now() - st.votingOpenedAt) / 1000;
+  return Math.max(0, VOTING_DURATION_SEC - elapsedSec);
+}
+
+/* תג שעון עצר משותף לקהל ולמנהל/ת — מוצג רק כשההצבעה פתוחה ויש לה
+   זמן פתיחה ידוע. מתאדם (צבע אדום) ב-10 השניות האחרונות. */
+function votingCountdownHTML(st){
+  var left = votingSecondsLeft(st);
+  if(left == null) return "";
+  var urgent = left <= 10;
+  return '<div style="display:inline-flex; align-items:center; gap:8px; background:'+(urgent?"rgba(226,131,111,.14)":"var(--card2)")+'; border:1.5px solid '+(urgent?"var(--bad)":"var(--gold)")+'; border-radius:14px; padding:8px 18px; font-weight:900; font-size:20px; color:'+(urgent?"var(--bad)":"var(--gold2)")+'; font-variant-numeric:tabular-nums;">'+
+    '<span style="width:8px;height:8px;border-radius:50%;background:'+(urgent?"var(--bad)":"var(--ok)")+';"></span>'+
+    formatCountdown(left)+
+  '</div>';
+}
+
+/* טיקר גלובלי: פועם כל שנייה כל עוד שלב ההצבעה פעיל, כדי (א) לרענן
+   את תצוגת שעון העצר לקהל ולמנהל/ת, ו-(ב) לנעול אוטומטית את ההצבעה
+   ב-state/admin ברגע שעברה דקה (VOTING_DURATION_SEC) מאז שנפתחה —
+   כל מכשיר שבו האפליקציה פתוחה יכול לבצע את הנעילה הזו (כתיבה כפולה
+   על ידי כמה מכשירים בו-זמנית היא בלתי מזיקה, כי התוצאה זהה). */
+var votingTickerStarted = false;
+function startVotingTicker(){
+  if(votingTickerStarted) return;
+  votingTickerStarted = true;
+  setInterval(function(){
+    var st = STATE.adminState;
+    if(!st || st.stage !== "voting") return;
+    if(st.votingOpen && st.votingOpenedAt){
+      var left = votingSecondsLeft(st);
+      if(left != null && left <= 0){
+        var database = getDb();
+        if(database){
+          database.doc("state/admin").update({votingOpen:false});
+        }
+      }
+    }
+    render();
+  }, 1000);
+}
+
 function uid(){
   return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,10);
 }
@@ -165,6 +225,7 @@ var STATE = {
   connStatus: "connecting", // connecting | ok | error
   adminState: null,
   showWelcome: false,  // true למשך כמה שניות מיד אחרי הקלדת השם, בזמן שמסך הפתיחה מוצג
+  entryNameError: false, // true כשניסו לשלוח את מסך הכניסה עם שם חלקי (לא פרטי+משפחה)
   myVotes: {},        // song -> candidate n
   myBest: null,        // song n chosen as best
   myWarmup: undefined,  // undefined=טרם נבדק מול השרת, null=נבדק ואין תשובה, מספר=התשובה שנשלחה
@@ -245,11 +306,12 @@ function viewEntry(){
     brandMarkHTML(78,34)+
     '<div class="eyebrow" style="margin-top:16px;">'+h(EVENT_NAME)+'</div>'+
     '<h1 class="page-title">הזמר<br>במסכה</h1>'+
-    '<div class="sub">כדי להצטרף, הזינו את שמכם — נצטרך אותו כדי לשמור את הניחושים והתוצאה האישית שלכם בסוף הערב.</div>'+
+    '<div class="sub">כדי להצטרף, הזינו <b style="color:var(--gold2);">שם פרטי ושם משפחה מלאים</b> — נצטרך אותם כדי לשמור את הניחושים והתוצאה האישית שלכם בסוף הערב.</div>'+
   '</div>'+
-  '<form id="entry-form" style="margin-top:26px; display:flex; flex-direction:column; gap:12px;">'+
-    '<input class="field" name="pname" placeholder="השם המלא שלך" required autocomplete="name">'+
-    '<button class="btn btn-gold" type="submit">כניסה לאירוע</button>'+
+  '<form id="entry-form" style="margin-top:26px; display:flex; flex-direction:column; gap:10px;">'+
+    '<input class="field" name="pname" placeholder="לדוגמה: ישראל ישראלי" required autocomplete="name">'+
+    (STATE.entryNameError ? '<div style="color:var(--bad); font-size:13.5px; font-weight:700; text-align:center;">נא להזין שם פרטי ושם משפחה (שתי מילים לפחות)</div>' : '')+
+    '<button class="btn btn-gold" type="submit" style="margin-top:4px;">כניסה לאירוע</button>'+
   '</form>'+
   '<div class="spacer"></div>'+
   '<div class="footer-note">בסריקת הקוד ובכניסה אני מאשר/ת השתתפות בתחרות הערב</div>';
@@ -264,7 +326,7 @@ function viewWelcome(){
   return ''+
   '<div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:18vh;">'+
     brandMarkHTML(88,38)+
-    '<h1 class="page-title" style="margin-top:20px; font-size:23px;">'+h(WELCOME_TITLE)+'</h1>'+
+    '<h1 class="page-title" style="margin-top:20px; font-size:27px;">'+h(WELCOME_TITLE)+'</h1>'+
     '<div class="sub" style="margin-top:10px;">מיד נתחיל בשאלת חימום קצרה לקהל</div>'+
   '</div>';
 }
@@ -308,7 +370,7 @@ function viewWarmupResults(st){
   }).join("");
   return ''+
   '<div class="eyebrow">שאלת חימום — התוצאות</div>'+
-  '<h1 class="page-title" style="font-size:21px;">'+h(WARMUP_QUESTION)+'</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">'+h(WARMUP_QUESTION)+'</h1>'+
   '<div class="sub">'+wu.total+' משתתפים ענו</div>'+
   '<div style="margin-top:20px;">'+rows+'</div>';
 }
@@ -333,7 +395,7 @@ function viewWarmup(st){
       '<div style="width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#3a2e12,#140b28);border:2px solid var(--gold);">'+
         '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'+
       '</div>'+
-      '<h1 class="page-title" style="margin-top:22px; font-size:21px;">התשובה נקלטה!</h1>'+
+      '<h1 class="page-title" style="margin-top:22px; font-size:26px;">התשובה נקלטה!</h1>'+
       '<div class="sub">בחרת: '+(chosen ? h(chosen.label) : '—')+'</div>'+
     '</div>'+
     (st.warmupOpen ?
@@ -347,7 +409,7 @@ function viewWarmup(st){
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       '<div class="eyebrow">שאלת חימום</div>'+
-      '<h1 class="page-title" style="font-size:21px; margin-top:6px;">כמעט מתחילים…</h1>'+
+      '<h1 class="page-title" style="font-size:26px; margin-top:6px;">כמעט מתחילים…</h1>'+
       '<div class="sub">השאלה תיפתח מיד</div>'+
     '</div>';
   }
@@ -362,7 +424,7 @@ function viewWarmup(st){
 
   return ''+
   '<div class="eyebrow">שאלת חימום</div>'+
-  '<h1 class="page-title" style="font-size:21px;">'+h(WARMUP_QUESTION)+'</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">'+h(WARMUP_QUESTION)+'</h1>'+
   '<div style="margin-top:20px;">'+rows+'</div>'+
   '<div style="margin-top:6px;"><button class="btn btn-gold" data-action="submit-warmup" '+(STATE.selectedWarmup?'':'disabled')+'>שליחת תשובה</button></div>';
 }
@@ -383,7 +445,7 @@ function viewVoting(st){
       '<div style="width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#3a2e12,#140b28);border:2px solid var(--gold);">'+
         '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'+
       '</div>'+
-      '<h1 class="page-title" style="margin-top:22px; font-size:21px;">הניחוש נקלט!</h1>'+
+      '<h1 class="page-title" style="margin-top:22px; font-size:26px;">הניחוש נקלט!</h1>'+
       '<div class="sub">התשובה תתגלה בסוף הערב, יחד עם כל החשיפות</div>'+
     '</div>'+
     '<div class="card" style="margin-top:24px; display:flex; align-items:center; gap:14px;">'+
@@ -397,6 +459,7 @@ function viewVoting(st){
        מאפשרים להתחרט ולבחור מחדש — לחיצה פשוט פותחת שוב את רשת
        הבחירה, עם הבחירה הקודמת מסומנת; שליחה חוזרת דורסת (set) את
        אותה רשומת הצבעה, כולל עדכון זמן ההצבעה. */
+    (st.votingOpen ? '<div style="margin-top:16px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>' : '')+
     (st.votingOpen ?
       '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-vote" style="width:100%;">שינוי הניחוש</button></div>'
     : '')+
@@ -408,7 +471,7 @@ function viewVoting(st){
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       '<div class="song-icon-badge" style="width:70px;height:70px;background:'+song.bg+';"><svg width="30" height="30" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
-      '<h1 class="page-title" style="margin-top:18px; font-size:21px;">ההצבעה עוד לא נפתחה</h1>'+
+      '<h1 class="page-title" style="margin-top:18px; font-size:26px;">ההצבעה עוד לא נפתחה</h1>'+
       '<div class="sub">ביצוע '+song.id+' מתוך 6 · '+h(song.name)+'<br>ההצבעה תיפתח מיד לאחר סיום השיר</div>'+
     '</div>';
   }
@@ -420,9 +483,10 @@ function viewVoting(st){
     '<div class="song-icon-badge" style="width:58px;height:58px;background:'+song.bg+'; flex-shrink:0;"><svg width="27" height="27" viewBox="0 0 40 40" fill="none" stroke="'+song.stroke+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+song.path+'</svg></div>'+
     '<div>'+
       '<span class="eyebrow">ביצוע '+song.id+' מתוך 6</span>'+
-      '<h1 class="page-title" style="font-size:27px; margin-top:2px;">'+h(song.name)+'</h1>'+
+      '<h1 class="page-title" style="font-size:32px; margin-top:2px;">'+h(song.name)+'</h1>'+
     '</div>'+
   '</div>'+
+  '<div style="margin-top:14px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>'+
   '<div class="sub" style="margin-top:8px;">מי מסתתר מתחת למסכה?</div>'+
   candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
   /* מרווח בתחתית כדי שהשורה האחרונה של המועמדים לא תיחבא מאחורי
@@ -447,7 +511,7 @@ function viewRecap(){
   }).join("");
   return ''+
   '<div class="eyebrow">לפני ההצבעה הבאה</div>'+
-  '<h1 class="page-title" style="font-size:21px;">כך נראה הערב עד עכשיו</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">כך נראה הערב עד עכשיו</h1>'+
   '<div style="margin-top:18px;">'+rows+'</div>'+
   '<div class="spacer"></div>'+
   '<div class="footer-note">בקרוב: הצבעה על הביצוע הכי טוב של הערב</div>';
@@ -462,7 +526,7 @@ function viewFinalVote(){
       '<div style="width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#3a2e12,#140b28);border:2px solid var(--gold);">'+
         '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'+
       '</div>'+
-      '<h1 class="page-title" style="margin-top:22px; font-size:21px;">ההצבעה נקלטה!</h1>'+
+      '<h1 class="page-title" style="margin-top:22px; font-size:26px;">ההצבעה נקלטה!</h1>'+
       '<div class="sub">בחרת ב'+h(s.name)+' כביצוע הכי טוב של הערב</div>'+
     '</div>'+
     '<div class="spacer"></div>'+
@@ -484,7 +548,7 @@ function viewFinalVote(){
   }).join("");
   return ''+
   '<div class="eyebrow">הצבעה סופית</div>'+
-  '<h1 class="page-title" style="font-size:21px;">מי היה הביצוע הכי טוב?</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">מי היה הביצוע הכי טוב?</h1>'+
   '<div class="sub">בחרו אחד מתוך 6</div>'+
   '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px;">'+cards+'</div>'+
   '<div style="margin-top:20px;"><button class="btn btn-gold" data-action="submit-best" '+(STATE.selectedBest?'':'disabled')+'>שליחת הצבעה</button></div>';
@@ -497,7 +561,7 @@ function viewReveal(st){
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       '<div class="eyebrow">שלב החשיפות</div>'+
-      '<h1 class="page-title" style="font-size:21px; margin-top:6px;">מיד מתחילים לחשוף…</h1>'+
+      '<h1 class="page-title" style="font-size:26px; margin-top:6px;">מיד מתחילים לחשוף…</h1>'+
       '<div class="sub">עקבו אחרי המסך הראשי באולם</div>'+
     '</div>';
   }
@@ -542,7 +606,7 @@ function viewReveal(st){
       (myN==null ? "לא הצבעת על השיר הזה" : (isCorrect ? "ניחשת נכון! 🎉" : "הפעם לא ניחשת נכון"))+
     '</div>'+
     (st.revealPct && st.revealPct[curSong] != null ?
-      '<div class="sub" style="margin-top:12px; font-weight:800; color:var(--gold2); font-size:15px;">'+st.revealPct[curSong]+'% מהקהל זיהו נכון את מי שמסתתר מתחת למסכה</div>'
+      '<div class="sub" style="margin-top:12px; font-weight:800; color:var(--gold2); font-size:17px;">'+st.revealPct[curSong]+'% מהקהל זיהו נכון את מי שמסתתר מתחת למסכה</div>'
     : '')+
   '</div>'+
   '<div class="spacer"></div>'+
@@ -572,7 +636,7 @@ function viewSummary(st){
   }).join("");
   return ''+
   '<div class="eyebrow">כל החשיפות הסתיימו</div>'+
-  '<h1 class="page-title" style="font-size:21px;">התוצאות שלך</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">התוצאות שלך</h1>'+
   '<div class="stat-tiles" style="margin-top:18px;">'+
     '<div class="stat-tile"><div class="num">'+me.rank+'</div><div class="lbl">המיקום שלך מתוך '+stats.totalParticipants+'</div></div>'+
     '<div class="stat-tile"><div class="num">'+me.correct+'/6</div><div class="lbl">ניחושים נכונים</div></div>'+
@@ -614,7 +678,7 @@ function viewLeaderboards(st){
 
   return ''+
   '<div class="eyebrow">לוח תוצאות</div>'+
-  '<h1 class="page-title" style="font-size:21px;">'+TOP_N+' המנחשים המובילים של הערב</h1>'+
+  '<h1 class="page-title" style="font-size:26px;">'+TOP_N+' המנחשים המובילים של הערב</h1>'+
   '<div style="margin-top:16px;">'+rows+myRow+'</div>'+
   '<div style="margin-top:20px;"><button class="btn btn-outline" data-action="refresh-stats">רענון נתונים</button></div>';
 }
@@ -640,7 +704,7 @@ function viewPodium(st){
     return ''+
     '<div style="margin-top:18vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       '<div class="eyebrow">הביצוע הכי טוב של הערב</div>'+
-      '<h1 class="page-title" style="font-size:21px; margin-top:6px;">מיד חושפים את הזוכים…</h1>'+
+      '<h1 class="page-title" style="font-size:26px; margin-top:6px;">מיד חושפים את הזוכים…</h1>'+
       '<div class="sub">עקבו אחרי המסך הראשי באולם</div>'+
     '</div>';
   }
@@ -943,11 +1007,14 @@ function adminMain(st){
         '<button class="btn '+(st.votingOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-voting" data-open="1">פתיחת הצבעה</button>'+
         '<button class="btn '+(!st.votingOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-voting" data-open="0">סגירת הצבעה</button>'+
       '</div>'+
-      '<div class="card" style="margin-top:24px; max-width:420px;">'+
-        '<div style="font-size:12.5px; color:var(--ink-dim);">הצבעות שהתקבלו לביצוע זה</div>'+
-        '<div style="font-size:34px; font-weight:900; margin-top:6px; font-variant-numeric:tabular-nums;">'+(cnt==null?'…':cnt)+'</div>'+
+      '<div style="display:flex; gap:16px; margin-top:24px; flex-wrap:wrap; align-items:flex-start;">'+
+        '<div class="card" style="max-width:420px;">'+
+          '<div style="font-size:12.5px; color:var(--ink-dim);">הצבעות שהתקבלו לביצוע זה</div>'+
+          '<div style="font-size:34px; font-weight:900; margin-top:6px; font-variant-numeric:tabular-nums;">'+(cnt==null?'…':cnt)+'</div>'+
+        '</div>'+
+        (st.votingOpen ? '<div class="card" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 22px;"><div style="font-size:12.5px; color:var(--ink-dim);">זמן שנותר</div>'+votingCountdownHTML(st)+'</div>' : '')+
       '</div>'+
-      '<div class="sub" style="margin-top:22px;">מצב הצבעה: <b style="color:'+(st.votingOpen?"var(--ok)":"var(--bad)")+';">'+(st.votingOpen?'פתוחה':'סגורה')+'</b></div>'+
+      '<div class="sub" style="margin-top:22px;">מצב הצבעה: <b style="color:'+(st.votingOpen?"var(--ok)":"var(--bad)")+';">'+(st.votingOpen?'פתוחה':'סגורה')+'</b>'+(st.votingOpen?' — ננעלת אוטומטית בתום '+VOTING_DURATION_SEC+' שניות, ואפשר גם לסגור ידנית לפני כן.':'')+'</div>'+
     '</div>';
   }
 
@@ -1085,8 +1152,16 @@ function bindActions(){
   if(entryForm){
     entryForm.addEventListener("submit", function(e){
       e.preventDefault();
-      var v = entryForm.pname.value.trim();
+      var v = entryForm.pname.value.trim().replace(/\s+/g," ");
       if(!v) return;
+      /* דורשים שם מלא (לפחות שתי מילים — שם פרטי ושם משפחה), כדי
+         שאפשר יהיה לזהות בבירור מי זה מי בדירוגים ובתוצאות. */
+      if(v.indexOf(" ") === -1){
+        STATE.entryNameError = true;
+        render();
+        return;
+      }
+      STATE.entryNameError = false;
       setParticipantName(v);
       ensureParticipantDoc();
       STATE.showWelcome = true;
@@ -1432,6 +1507,7 @@ function init(){
   if(getParticipantName()) ensureParticipantDoc();
   subscribeAdminState();
   if(STATE.isAdmin) subscribeAdminExtras();
+  startVotingTicker();
 }
 
 init();
