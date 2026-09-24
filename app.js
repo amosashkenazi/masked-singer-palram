@@ -126,13 +126,6 @@ function brandMarkHTML(boxSize, iconSize){
 
 /* ===================== שעון עצר להצבעה ===================== */
 
-function formatCountdown(sec){
-  sec = Math.max(0, Math.round(sec));
-  var m = Math.floor(sec/60);
-  var s = sec % 60;
-  return m + ":" + (s<10?"0":"") + s;
-}
-
 /* כמה שניות נותרו להצבעה הנוכחית, לפי votingOpenedAt שנשמר ב-state/admin
    כשההצבעה נפתחה. מחזירה null אם ההצבעה לא פתוחה או שאין זמן פתיחה
    שמור (למשל הצבעה שנפתחה בגרסה ישנה של הקוד, לפני התוספת הזו). */
@@ -142,51 +135,49 @@ function votingSecondsLeft(st){
   return Math.max(0, VOTING_DURATION_SEC - elapsedSec);
 }
 
-/* תג שעון עצר משותף לקהל ולמנהל/ת — מוצג רק כשההצבעה פתוחה ויש לה
-   זמן פתיחה ידוע. מתאדם (צבע אדום) ב-10 השניות האחרונות. */
+/* שעון עצר עגול בלי ספרות — טבעת שמתרוקנת בהדרגה מירוק לאדום, בדיוק
+   כמו טיימר "פאי". חשוב: זו אנימציית CSS טהורה (ראו vote-timer-arc
+   ב-styles.css) שרצה בעצמה על המכשיר ברגע שהיא מצוירת — היא לא
+   דורשת שום רינדור חוזר מה-JS כדי "לזוז". animation-delay שלילי,
+   שווה לזמן שכבר חלף, קופץ אותה מיד לנקודה הנכונה גם אם המכשיר
+   הצטרף באמצע ההצבעה. ה"קפיצה" הזאת קורית פעם אחת ברגע שהמסך מצויר
+   (למשל כשההצבעה נפתחת), ומשם והלאה שום דבר אחר במסך (כולל תמונות
+   המועמדים) לא מתעדכן/מהבהב בשביל השעון. */
 function votingCountdownHTML(st){
   var left = votingSecondsLeft(st);
   if(left == null) return "";
-  var urgent = left <= 10;
-  return '<div style="display:inline-flex; align-items:center; gap:8px; background:'+(urgent?"rgba(226,131,111,.14)":"var(--card2)")+'; border:1.5px solid '+(urgent?"var(--bad)":"var(--gold)")+'; border-radius:14px; padding:8px 18px; font-weight:900; font-size:20px; color:'+(urgent?"var(--bad)":"var(--gold2)")+'; font-variant-numeric:tabular-nums;">'+
-    '<span style="width:8px;height:8px;border-radius:50%;background:'+(urgent?"var(--bad)":"var(--ok)")+';"></span>'+
-    formatCountdown(left)+
+  var elapsed = Math.max(0, VOTING_DURATION_SEC - left);
+  var r = 26, circumference = 2 * Math.PI * r; // r=26 קבוע — תואם את ה-stroke-dashoffset הסופי שקבוע ב-CSS
+  return '<div class="vote-timer">'+
+    '<svg width="64" height="64" viewBox="0 0 64 64">'+
+      '<circle cx="32" cy="32" r="'+r+'" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="10"/>'+
+      '<circle class="vote-timer-arc" cx="32" cy="32" r="'+r+'" fill="none" stroke-width="10" stroke-linecap="round" '+
+        'style="stroke-dasharray:'+circumference.toFixed(2)+'; animation-duration:'+VOTING_DURATION_SEC+'s; animation-delay:-'+elapsed.toFixed(2)+'s;"></circle>'+
+    '</svg>'+
   '</div>';
 }
 
-/* טיקר גלובלי: פועם כל שנייה כל עוד שלב ההצבעה פעיל, כדי (א) לרענן
-   את תצוגת שעון העצר לקהל ולמנהל/ת, ו-(ב) לנעול אוטומטית את ההצבעה
-   ב-state/admin ברגע שעברה דקה (VOTING_DURATION_SEC) מאז שנפתחה —
-   כל מכשיר שבו האפליקציה פתוחה יכול לבצע את הנעילה הזו (כתיבה כפולה
-   על ידי כמה מכשירים בו-זמנית היא בלתי מזיקה, כי התוצאה זהה). */
+/* טיקר גלובלי: פועם כל שנייה כל עוד שלב ההצבעה פעיל, אך ורק כדי
+   לבדוק אם עברה דקה (VOTING_DURATION_SEC) מאז שההצבעה נפתחה, ואם כן
+   לנעול אותה אוטומטית ב-state/admin. חשוב: הוא בכוונה *לא* קורא ל-
+   render() — התצוגה (כולל שעון העצר עצמו) מתעדכנת דרך CSS או דרך
+   ה-onSnapshot הרגיל על state/admin, כך שאין כאן שום רינדור-יתר
+   שעלול להבהב תמונות או למחוק טקסט שמישהו/י באמצע להקליד. כתיבה
+   כפולה על ידי כמה מכשירים בו-זמנית היא בלתי מזיקה, כי התוצאה זהה. */
 var votingTickerStarted = false;
 function startVotingTicker(){
   if(votingTickerStarted) return;
   votingTickerStarted = true;
   setInterval(function(){
     var st = STATE.adminState;
-    if(!st || st.stage !== "voting") return;
-    if(st.votingOpen && st.votingOpenedAt){
-      var left = votingSecondsLeft(st);
-      if(left != null && left <= 0){
-        var database = getDb();
-        if(database){
-          database.doc("state/admin").update({votingOpen:false});
-        }
+    if(!st || st.stage !== "voting" || !st.votingOpen || !st.votingOpenedAt) return;
+    var left = votingSecondsLeft(st);
+    if(left != null && left <= 0){
+      var database = getDb();
+      if(database){
+        database.doc("state/admin").update({votingOpen:false});
       }
     }
-    /* לא מרעננים את המסך כל עוד יש טופס טקסט פתוח שבו מקלידים ועדיין
-       לא שלחו (מסך הקלדת השם אצל הקהל, לפני שיש שם שמור; או מסך קוד
-       הגישה אצל המנהל/ת, לפני אימות) — render() מחליף את כל תוכן
-       הדף, וכל עוד היה קורה כאן פעם בשנייה בלי התנאי הזה, זה מחק את
-       מה שהמשתמש/ת באמצע להקליד ואיבד את הפוקוס מהשדה בכל שנייה. */
-    if(STATE.isAdmin){
-      if(!STATE.adminAuthed) return;
-    } else {
-      if(!getParticipantName()) return;
-      if(STATE.showWelcome) return;
-    }
-    render();
   }, 1000);
 }
 
