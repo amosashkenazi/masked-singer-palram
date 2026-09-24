@@ -113,6 +113,24 @@ h1.page-title{font-size:24px; font-weight:900; margin:6px 0 0; text-wrap:balance
 .spacer{flex:1;}
 .footer-note{font-size:12px; color:var(--ink-dim); text-align:center; margin-top:14px;}
 
+/* שעון עצר להצבעה — טבעת עגולה בלי ספרות שמתרוקנת בהדרגה מירוק
+   לאדום. אנימציית CSS טהורה (בלי שום JS שמריץ אותה מחדש כל שנייה),
+   כדי שלא תגרום לשום ריענון/הבהוב של שאר המסך (כולל תמונות
+   המועמדים). ה-transform:rotate מתחיל את הטבעת מלמעלה (12 השעות)
+   ומריק אותה עם כיוון השעון. r=26 קבוע בקוד; 163.36 = 2·π·26 (היקף
+   אותה טבעת בדיוק), אז הטבעת מגיעה לגמרי לאדום/ריקה בסוף הזמן. */
+.vote-timer{display:inline-flex;}
+.vote-timer svg{transform:rotate(-90deg);}
+.vote-timer-arc{
+  animation-name: vote-timer-tick;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes vote-timer-tick{
+  0%   { stroke-dashoffset: 0; stroke: var(--ok); }
+  100% { stroke-dashoffset: 163.36; stroke: var(--bad); }
+}
+
 .tabs{display:flex; gap:6px; background:var(--card2); border-radius:14px; padding:4px; border:1px solid var(--line);}
 .tab{flex:1; text-align:center; padding:9px 4px; border-radius:11px; font-size:12px; font-weight:700; color:var(--ink-dim); border:none; background:transparent;}
 .tab.active{background:var(--gold); color:#241300;}
