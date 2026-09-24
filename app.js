@@ -589,7 +589,7 @@ function viewReveal(st){
     return ''+
     '<div style="text-align:center; margin-top:10vh;">'+
       '<div class="eyebrow">חשיפה הבאה</div>'+
-      '<div class="song-icon-badge" style="width:96px;height:96px;margin:22px auto 0;background:'+songTeaser.bg+';"><svg width="42" height="42" viewBox="0 0 40 40" fill="none" stroke="'+songTeaser.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+songTeaser.path+'</svg></div>'+
+      '<div style="margin:22px auto 0; display:flex; justify-content:center;">'+songBadgeHTML(songTeaser,96)+'</div>'+
       '<h1 class="page-title" style="margin-top:20px;">ביצוע '+songTeaser.id+' · '+h(songTeaser.name)+'</h1>'+
       '<div class="sub" style="margin-top:8px;">מי מסתתר מתחת למסכה הזו?<br>עקבו אחרי המנחה/ה על הבמה…</div>'+
     '</div>';
