@@ -269,6 +269,14 @@ var STATE = {
   adminParticipants: null,
   adminWarmup: null,   // {total, counts:{n->count}} — תוצאות שאלת החימום, מתעדכן חי
   adminView: "stage", // "stage" | "participants" — local admin-only UI toggle, never affects what the audience sees
+  /* איזה פאנל-בקרה מוצג כרגע במסך הניהול (הצד הימני) — local-only,
+     בכוונה מנותק מ-st.stage (השלב שהקהל בפועל רואה): כל כניסה/רענון
+     של דף הניהול מתחילה תמיד מ"warmup", בלי קשר לאיפה שהאירוע האמיתי
+     באמת נמצא כרגע. לחיצה על כפתור בתפריט הצד (admin-set-song /
+     admin-set-stage) מעדכנת גם את זה וגם את השלב האמיתי אצל הקהל,
+     בדיוק כמו קודם — כך שבשימוש רגיל (עוברים שלב-שלב באירוע) שום דבר
+     לא משתנה בפועל; ההבדל מורגש רק ברגע הראשון אחרי כניסה/רענון. */
+  adminBrowseStage: "warmup",
   adminRevealPick: {},   // song -> candidate n chosen in the reveal selector
   confirmModal: null,    // {text, onYes}
   displayVoteCount: null // ספירת ההצבעות החי על השיר הנוכחי — רק במסך התצוגה (display.html), ראו subscribeDisplayVoteCount
@@ -1040,7 +1048,7 @@ function adminSidebar(st){
     return '<button type="button" class="stage-btn'+(active?' active':'')+'" data-action="'+action+'" '+(extra||'')+'>'+h(label)+'</button>';
   };
   var songBtns = SONGS.map(function(s){
-    var active = st.stage === "voting" && st.currentSong === s.id;
+    var active = STATE.adminBrowseStage === "voting" && st.currentSong === s.id;
     return stageBtn((s.id)+' · '+s.name, active, "admin-set-song", 'data-n="'+s.id+'"');
   }).join("");
 
@@ -1056,7 +1064,7 @@ function adminSidebar(st){
     '<div>'+
       '<div class="admin-h" style="margin-bottom:8px;">לפני שמתחילים</div>'+
       '<div style="display:flex; flex-direction:column; gap:8px;">'+
-        stageBtn("שאלת חימום לקהל", st.stage==="warmup", "admin-set-stage", 'data-stage="warmup"')+
+        stageBtn("שאלת חימום לקהל", STATE.adminBrowseStage==="warmup", "admin-set-stage", 'data-stage="warmup"')+
       '</div>'+
     '</div>'+
     '<div>'+
@@ -1066,17 +1074,31 @@ function adminSidebar(st){
     '<div>'+
       '<div class="admin-h" style="margin-bottom:8px;">שלבים נוספים</div>'+
       '<div style="display:flex; flex-direction:column; gap:8px;">'+
-        stageBtn("תזכורת (Recap)", st.stage==="recap", "admin-set-stage", 'data-stage="recap"')+
-        stageBtn("הצבעה לביצוע הכי טוב", st.stage==="finalVote", "admin-set-stage", 'data-stage="finalVote"')+
-        stageBtn("רצף חשיפות", st.stage==="reveal", "admin-set-stage", 'data-stage="reveal"')+
-        stageBtn("פודיום — הביצוע הכי טוב", st.stage==="podium", "admin-set-stage", 'data-stage="podium"')+
-        stageBtn("סיכום אישי לקהל", st.stage==="summary", "admin-set-stage", 'data-stage="summary"')+
-        stageBtn("לוחות תוצאות", st.stage==="leaderboards", "admin-set-stage", 'data-stage="leaderboards"')+
+        stageBtn("תזכורת (Recap)", STATE.adminBrowseStage==="recap", "admin-set-stage", 'data-stage="recap"')+
+        stageBtn("הצבעה לביצוע הכי טוב", STATE.adminBrowseStage==="finalVote", "admin-set-stage", 'data-stage="finalVote"')+
+        stageBtn("רצף חשיפות", STATE.adminBrowseStage==="reveal", "admin-set-stage", 'data-stage="reveal"')+
+        stageBtn("פודיום — הביצוע הכי טוב", STATE.adminBrowseStage==="podium", "admin-set-stage", 'data-stage="podium"')+
+        stageBtn("סיכום אישי לקהל", STATE.adminBrowseStage==="summary", "admin-set-stage", 'data-stage="summary"')+
+        stageBtn("לוחות תוצאות", STATE.adminBrowseStage==="leaderboards", "admin-set-stage", 'data-stage="leaderboards"')+
       '</div>'+
     '</div>'+
     '<div class="spacer"></div>'+
     '<button type="button" class="btn btn-outline" data-action="goto-audience">מעבר לתצוגת קהל (לבדיקה)</button>'+
     '<button type="button" class="btn btn-outline" data-action="admin-reset" style="color:var(--bad); border-color:rgba(226,131,111,.4);">איפוס האירוע (למצב בדיקה)</button>'+
+  '</div>';
+}
+
+/* באנר אזהרה קטן לפאנלים בהם המנהל/ת "מסתכל/ת" על שלב מסוים
+   (STATE.adminBrowseStage) בעוד שהקהל בפועל נמצא בשלב אחר (st.stage) —
+   יכול לקרות כי מסך הניהול תמיד "נוחת" על שאלת החימום בכל כניסה/רענון
+   (בכוונה — ראו STATE.adminBrowseStage), בלי קשר לאיפה שהאירוע האמיתי
+   נמצא. עוזר למנוע בלבול: למשל לוחצים "פתיחת הצבעה" במסך שלא באמת
+   מוצג לקהל כרגע. */
+function liveNoticeHTML(st, browsedStage){
+  if(st.stage === browsedStage) return "";
+  return '<div class="card2" style="display:flex; align-items:center; gap:10px; margin-top:14px; max-width:420px;">'+
+    '<span class="dot warn"></span>'+
+    '<span style="font-size:12.5px; color:var(--ink-dim);">שלב זה עדיין לא הופעל לקהל בפועל — לחצו שוב על הכפתור המתאים בתפריט הצד כדי להעביר אליו את הקהל.</span>'+
   '</div>';
 }
 
@@ -1098,7 +1120,7 @@ function adminMain(st){
       '<div style="margin-top:20px; max-width:520px; max-height:70vh; overflow-y:auto;">'+rows+'</div>'+
     '</div>';
   }
-  if(st.stage === "warmup"){
+  if(STATE.adminBrowseStage === "warmup"){
     if(!WARMUP_OPTIONS.length){
       return '<div class="admin-main">'+
         '<div class="admin-h">שאלת חימום</div>'+
@@ -1124,6 +1146,7 @@ function adminMain(st){
       '<div class="admin-h">שלב נוכחי</div>'+
       '<h1 class="page-title">שאלת חימום לקהל</h1>'+
       '<div class="sub" style="margin-top:6px;">'+h(WARMUP_QUESTION)+'</div>'+
+      liveNoticeHTML(st, "warmup")+
       '<div style="display:flex; gap:12px; margin-top:20px;">'+
         '<button class="btn '+(st.warmupOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-warmup" data-open="1">פתיחת שאלה</button>'+
         '<button class="btn '+(!st.warmupOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-warmup" data-open="0">סגירת שאלה</button>'+
@@ -1143,12 +1166,13 @@ function adminMain(st){
       '</div>'+
     '</div>';
   }
-  if(st.stage === "voting"){
+  if(STATE.adminBrowseStage === "voting"){
     var song = songById(st.currentSong);
     var cnt = STATE.adminVoteCount;
     return '<div class="admin-main">'+
       '<div class="admin-h">שלב נוכחי</div>'+
       '<h1 class="page-title">ביצוע '+song.id+' · '+h(song.name)+'</h1>'+
+      liveNoticeHTML(st, "voting")+
       '<div style="display:flex; gap:12px; margin-top:20px;">'+
         '<button class="btn '+(st.votingOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-voting" data-open="1">פתיחת הצבעה</button>'+
         '<button class="btn '+(!st.votingOpen?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 22px;" data-action="admin-toggle-voting" data-open="0">סגירת הצבעה</button>'+
@@ -1164,7 +1188,7 @@ function adminMain(st){
     '</div>';
   }
 
-  if(st.stage === "reveal"){
+  if(STATE.adminBrowseStage === "reveal"){
     var order = st.revealOrder;
 
     if(!order){
@@ -1236,7 +1260,7 @@ function adminMain(st){
     '</div>';
   }
 
-  if(st.stage === "podium"){
+  if(STATE.adminBrowseStage === "podium"){
     if(STATE.statsLoading || !STATE.stats){
       if(!STATE.statsLoading) loadStats(st);
       return '<div class="admin-main">'+viewLoading("סופרים הצבעות…")+'</div>';
@@ -1271,10 +1295,14 @@ function adminMain(st){
   }
 
   var stageLabels = {warmup:"שאלת חימום לקהל", recap:"תזכורת לקהל", finalVote:"הצבעה לביצוע הכי טוב", summary:"סיכום אישי לקהל", leaderboards:"לוחות תוצאות לקהל"};
+  var browsedStage = STATE.adminBrowseStage;
+  var isLiveForAudience = st.stage === browsedStage;
   return '<div class="admin-main">'+
-    '<div class="admin-h">שלב נוכחי</div>'+
-    '<h1 class="page-title">'+h(stageLabels[st.stage] || st.stage)+'</h1>'+
-    '<div class="sub" style="margin-top:10px;">מסך זה מוצג כעת לכל הקהל. השתמשו בתפריט הצד כדי לעבור לשלב הבא.</div>'+
+    '<div class="admin-h">'+(isLiveForAudience ? "שלב נוכחי" : "תצוגה מקדימה (לא הופעל עדיין לקהל)")+'</div>'+
+    '<h1 class="page-title">'+h(stageLabels[browsedStage] || browsedStage)+'</h1>'+
+    '<div class="sub" style="margin-top:10px;">'+(isLiveForAudience ?
+      'מסך זה מוצג כעת לכל הקהל. השתמשו בתפריט הצד כדי לעבור לשלב הבא.' :
+      'השלב הזה עדיין לא הופעל לקהל — לחצו שוב על הכפתור בתפריט הצד כדי להעביר אליו את הקהל בפועל.')+'</div>'+
   '</div>';
 }
 
@@ -1430,6 +1458,7 @@ function onAppClick(e){
   } else if(action === "admin-set-song"){
     if(!database) return;
     STATE.adminView = "stage";
+    STATE.adminBrowseStage = "voting";
     render();
     /* מאפסים גם את votingOpenedAt כדי שמעבר לשיר חדש לא "יזכור" בטעות
        שההצבעה כבר נפתחה/הסתיימה עבור השיר הקודם (ראו viewVoting —
@@ -1444,6 +1473,7 @@ function onAppClick(e){
   } else if(action === "admin-set-stage"){
     if(!database) return;
     STATE.adminView = "stage";
+    STATE.adminBrowseStage = el.dataset.stage;
     render();
     database.doc("state/admin").update({stage: el.dataset.stage});
   } else if(action === "admin-compute-order"){
