@@ -162,13 +162,14 @@ function votingSecondsLeft(st){
    הצטרף באמצע ההצבעה. ה"קפיצה" הזאת קורית פעם אחת ברגע שהמסך מצויר
    (למשל כשההצבעה נפתחת), ומשם והלאה שום דבר אחר במסך (כולל תמונות
    המועמדים) לא מתעדכן/מהבהב בשביל השעון. */
-function votingCountdownHTML(st){
+function votingCountdownHTML(st, size){
   var left = votingSecondsLeft(st);
   if(left == null) return "";
   var elapsed = Math.max(0, VOTING_DURATION_SEC - left);
-  var r = 26, circumference = 2 * Math.PI * r; // r=26 קבוע — תואם את ה-stroke-dashoffset הסופי שקבוע ב-CSS
+  var r = 26, circumference = 2 * Math.PI * r; // r=26 קבוע — תואם את ה-stroke-dashoffset הסופי שקבוע ב-CSS, בלי קשר לגודל התצוגה בפועל (viewBox תמיד 0 0 64 64; size רק קובע כמה גדול זה מצטייר על המסך)
+  var s = size || 64;
   return '<div class="vote-timer">'+
-    '<svg width="64" height="64" viewBox="0 0 64 64">'+
+    '<svg width="'+s+'" height="'+s+'" viewBox="0 0 64 64">'+
       '<circle cx="32" cy="32" r="'+r+'" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="10"/>'+
       '<circle class="vote-timer-arc" cx="32" cy="32" r="'+r+'" fill="none" stroke-width="10" stroke-linecap="round" '+
         'style="stroke-dasharray:'+circumference.toFixed(2)+'; animation-duration:'+VOTING_DURATION_SEC+'s; animation-delay:-'+elapsed.toFixed(2)+'s;"></circle>'+
@@ -265,7 +266,8 @@ var STATE = {
   adminWarmup: null,   // {total, counts:{n->count}} — תוצאות שאלת החימום, מתעדכן חי
   adminView: "stage", // "stage" | "participants" — local admin-only UI toggle, never affects what the audience sees
   adminRevealPick: {},   // song -> candidate n chosen in the reveal selector
-  confirmModal: null     // {text, onYes}
+  confirmModal: null,    // {text, onYes}
+  displayVoteCount: null // ספירת ההצבעות החי על השיר הנוכחי — רק במסך התצוגה (display.html), ראו subscribeDisplayVoteCount
 };
 
 var pid = getParticipantId();
@@ -290,6 +292,14 @@ function statusPill(){
 }
 
 function renderAudience(){
+  /* מסך התצוגה (display.html) — קורא ל-app.js הזה בדיוק כמו index.html,
+     רק עם window.MS_DISPLAY_MODE=true: אין כאן שום משתתף/ת אמיתי/ת
+     (אין הקלדת שם, אין הצבעה מהמסך הזה), ולכן יש לו נתיב רינדור נפרד
+     לגמרי — renderDisplay() — שמציג רק תצוגה ציבורית/מצטברת, בלי שום
+     מידע אישי ובלי אלמנטים אינטראקטיביים. ראה גם viewDisplay* למטה. */
+  if(window.MS_DISPLAY_MODE){
+    return renderDisplay();
+  }
   var name = getParticipantName();
   var inner;
   if(!name){
@@ -314,6 +324,115 @@ function renderAudience(){
     '<div class="top-status">'+statusPill()+'<span>'+h(EVENT_NAME)+'</span></div>'+
     inner+
     '<button type="button" data-action="goto-admin" style="position:fixed; bottom:10px; left:10px; opacity:.3; background:transparent; border:none; color:var(--ink-dim); font-size:10px; padding:6px;">ניהול</button>'+
+  '</div>';
+}
+
+/* ===================== מסך תצוגה (display.html — מסך גדול/טלוויזיה באולם) =====================
+
+   הכלל המנחה כאן: כל מה שכבר מוצג לקהל כתצוגה ציבורית/מצטברת גרידא
+   (בלי מידע אישי, בלי קלט) — viewRecap, viewPodium, viewLeaderboards —
+   פשוט משתמש חוזר בפונקציות הקיימות כמו שהן. שלבים שהם אינהרנטית
+   אישיים או דורשים קלט מהקהל (finalVote/warmup לפני שנחשפות תוצאות/
+   summary האישי) מקבלים כאן מסך המתנה נייטרלי במקום, כי אין טעם
+   ("ושום דרך בטוחה") להציג "את ההצבעה של מי" על מסך משותף. שלב
+   ה-voting מקבל תצוגה ייעודית: ספירת הצבעות חיה במקום רשת בחירה
+   אינטראקטיבית (שאף אחד לא אמור ללחוץ עליה מהטלוויזיה באולם). */
+
+function renderDisplay(){
+  var inner;
+  if(!STATE.adminState){
+    inner = viewLoading("טוען את מצב האירוע…");
+  } else {
+    var st = STATE.adminState;
+    if(st.stage === "warmup") inner = viewDisplayWarmup(st);
+    else if(st.stage === "voting") inner = viewDisplayVoting(st);
+    else if(st.stage === "recap") inner = viewRecap();
+    else if(st.stage === "finalVote") inner = viewDisplayHolding("ההצבעה על הביצוע הכי טוב של הערב פתוחה כעת בטלפונים של הקהל");
+    else if(st.stage === "reveal") inner = viewDisplayReveal(st);
+    else if(st.stage === "podium") inner = viewPodium(st);
+    else if(st.stage === "summary") inner = viewDisplayHolding("כל אחד/ת רואה עכשיו בטלפון שלו/ה את התוצאה האישית של הערב");
+    else if(st.stage === "leaderboards") inner = viewLeaderboards(st);
+    else inner = viewLoading("ממתינים לתחילת הערב…");
+  }
+  return '<div class="tv-shell">'+
+    '<div class="top-status"><span>'+h(EVENT_NAME)+'</span>'+statusPill()+'</div>'+
+    inner+
+  '</div>';
+}
+
+function viewDisplayHolding(msg){
+  return ''+
+  '<div style="margin-top:22vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+    brandMarkHTML(72,32)+
+    '<h1 class="page-title" style="margin-top:20px;">'+h(msg)+'</h1>'+
+  '</div>';
+}
+
+function viewDisplayWarmup(st){
+  if(!WARMUP_OPTIONS.length) return viewLoading("ממתינים לתחילת הערב…");
+  if(st.warmupResultsVisible) return viewWarmupResults(st);
+  return viewDisplayHolding("שאלת חימום פתוחה כעת בטלפונים של הקהל");
+}
+
+function viewDisplayVoting(st){
+  var song = songById(st.currentSong);
+  if(!song) return viewLoading("ממתינים…");
+  var maxSongId = SONGS.reduce(function(m,s){ return Math.max(m, s.id); }, 0);
+
+  if(!st.votingOpen){
+    return ''+
+    '<div style="margin-top:14vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+      songBadgeHTML(song,110)+
+      '<span class="eyebrow" style="margin-top:18px; font-size:16px;">ביצוע '+song.id+' מתוך '+maxSongId+'</span>'+
+      '<h1 class="page-title" style="font-size:38px; margin-top:4px;">'+h(song.name)+'</h1>'+
+      '<div class="sub" style="font-size:18px; margin-top:8px;">ההצבעה תיפתח מיד לאחר סיום השיר</div>'+
+    '</div>';
+  }
+
+  var cnt = STATE.displayVoteCount;
+  return ''+
+  '<div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-top:6vh;">'+
+    songBadgeHTML(song,90)+
+    '<div>'+
+      '<span class="eyebrow" style="font-size:16px;">ביצוע '+song.id+' מתוך '+maxSongId+'</span>'+
+      '<h1 class="page-title" style="font-size:42px; margin-top:4px;">'+h(song.name)+'</h1>'+
+    '</div>'+
+  '</div>'+
+  '<div style="margin-top:26px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>'+
+  '<div class="sub" style="text-align:center; margin-top:18px; font-size:20px; font-weight:800; color:var(--gold2);">'+
+    (cnt==null ? "סופרים הצבעות…" : cnt+' הצביעו עד כה')+
+  '</div>'+
+  '<div class="footer-note" style="font-size:15px; margin-top:26px;">מי מסתתר מתחת למסכה? הצביעו עכשיו בטלפון שלכם</div>';
+}
+
+function viewDisplayReveal(st){
+  var ca = st.correctAnswers || {};
+  var curSong = st.currentRevealSong;
+  if(!curSong){
+    return viewDisplayHolding("מיד מתחילים לחשוף…");
+  }
+  var songTeaser = songById(curSong);
+  if(ca[curSong] == null){
+    return ''+
+    '<div style="text-align:center; margin-top:8vh;">'+
+      '<div class="eyebrow">חשיפה הבאה</div>'+
+      '<div style="margin:22px auto 0; display:flex; justify-content:center;">'+songBadgeHTML(songTeaser,150)+'</div>'+
+      '<h1 class="page-title" style="margin-top:22px; font-size:40px;">ביצוע '+songTeaser.id+' · '+h(songTeaser.name)+'</h1>'+
+      '<div class="sub" style="margin-top:10px; font-size:19px;">מי מסתתר מתחת למסכה הזו?</div>'+
+    '</div>';
+  }
+  var correctN = ca[curSong];
+  var correctC = candByN(correctN);
+  return ''+
+  '<div style="text-align:center; margin-top:5vh;">'+
+    '<div class="eyebrow">חשיפה! · ביצוע מספר '+songTeaser.id+'</div>'+
+    '<div class="sub" style="margin-top:6px; font-size:18px;">מתחת למסכת '+h(songTeaser.name)+' הסתתר/ה…</div>'+
+    '<div class="hero-avatar" style="width:190px;height:190px;margin-top:26px;border:4px solid var(--gold);">'+avatarHTML(correctC,190)+'</div>'+
+    '<h1 class="page-title" style="margin-top:22px; font-size:44px;">'+(correctC?h(correctC.name):"—")+'</h1>'+
+    (correctC ? '<div class="sub" style="font-size:18px;">#'+correctC.n+'</div>' : '')+
+    (st.revealPct && st.revealPct[curSong] != null ?
+      '<div class="sub" style="margin-top:16px; font-weight:800; color:var(--gold2); font-size:24px;">'+st.revealPct[curSong]+'% מהקהל זיהו נכון</div>'
+    : '')+
   '</div>';
 }
 
@@ -358,7 +477,7 @@ function candGridHTML(list, selectedGetter, actionName){
     var c = list[i];
     var sel = selectedGetter() === c.n;
     out += '<button type="button" class="cand'+(sel?' sel':'')+'" data-action="'+actionName+'" data-n="'+c.n+'">'+
-      '<div class="avatar-wrap">'+avatarHTML(c,56)+'<div class="num">'+c.n+'</div></div>'+
+      '<div class="avatar-wrap">'+avatarHTML(c,64)+'<div class="num">'+c.n+'</div></div>'+
       '<div class="nm">'+h(c.name)+'</div>'+
       '<div class="check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#241300" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'+
     '</button>';
@@ -480,7 +599,7 @@ function viewVoting(st){
        מאפשרים להתחרט ולבחור מחדש — לחיצה פשוט פותחת שוב את רשת
        הבחירה, עם הבחירה הקודמת מסומנת; שליחה חוזרת דורסת (set) את
        אותה רשומת הצבעה, כולל עדכון זמן ההצבעה. */
-    (st.votingOpen ? '<div style="margin-top:16px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>' : '')+
+    (st.votingOpen ? '<div style="margin-top:16px; display:flex; justify-content:center;">'+votingCountdownHTML(st, 46)+'</div>' : '')+
     (st.votingOpen ?
       '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-vote" style="width:100%;">שינוי הניחוש</button></div>'
     : '')+
@@ -498,17 +617,20 @@ function viewVoting(st){
   }
 
   /* כותרת גדולה ומודגשת שממקדת מי בעל החיים שמנחשים עליו כרגע —
-     שם השיר עצמו הוא הכותרת הראשית (H1), לא רק שורת תת-כותרת קטנה. */
+     שם השיר עצמו הוא הכותרת הראשית (H1), לא רק שורת תת-כותרת קטנה.
+     השעון יושב בצד (לא בשורה נפרדת משלו) וקטן יותר, כדי שרוב גובה
+     המסך יישאר לתמונות המועמדים למטה — במיוחד חשוב בטלפון, ששם כל
+     שורה תופסת נתח גדול מהמסך. */
   return ''+
-  '<div style="display:flex; align-items:center; gap:14px;">'+
-    songBadgeHTML(song,58)+
-    '<div>'+
+  '<div style="display:flex; align-items:center; gap:12px;">'+
+    songBadgeHTML(song,54)+
+    '<div style="flex:1; min-width:0;">'+
       '<span class="eyebrow">ביצוע '+song.id+' מתוך 6</span>'+
-      '<h1 class="page-title" style="font-size:32px; margin-top:2px;">'+h(song.name)+'</h1>'+
+      '<h1 class="page-title" style="font-size:26px; margin-top:2px; overflow-wrap:break-word; word-break:break-word;">'+h(song.name)+'</h1>'+
     '</div>'+
+    votingCountdownHTML(st, 46)+
   '</div>'+
-  '<div style="margin-top:14px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>'+
-  '<div class="sub" style="margin-top:8px;">מי מסתתר מתחת למסכה?</div>'+
+  '<div class="sub" style="margin-top:10px;">מי מסתתר מתחת למסכה?</div>'+
   candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
   /* מרווח בתחתית כדי שהשורה האחרונה של המועמדים לא תיחבא מאחורי
      סרגל השליחה הקבוע (ראו למטה). */
@@ -1514,10 +1636,44 @@ function subscribeAdminExtras(){
   }, 500);
 }
 
+/* מקבילה מצומצמת ל"מעקב אחר ספירת הצבעות חי לשיר הנוכחי" מתוך
+   subscribeAdminExtras, אבל רק לצורך הזה — בלי מנוי participants/
+   warmupVotes ובלי הכתיבה החוזרת ל-state/admin.warmupCounts, שהיא
+   באחריות מסך הניהול בלבד (subscribeAdminExtras למעלה). מסך התצוגה
+   (display.html) קורא לזה במקום ל-subscribeAdminExtras. */
+var displayVoteCountStarted = false;
+function subscribeDisplayVoteCount(){
+  if(displayVoteCountStarted) return;
+  var database = getDb();
+  if(!database){
+    setTimeout(subscribeDisplayVoteCount, 400);
+    return;
+  }
+  displayVoteCountStarted = true;
+  var lastSong = null;
+  var unsubVotes = null;
+  setInterval(function(){
+    var st = STATE.adminState;
+    if(!st || st.stage !== "voting"){ return; }
+    if(st.currentSong === lastSong) return;
+    lastSong = st.currentSong;
+    if(unsubVotes) unsubVotes();
+    unsubVotes = database.collection("votes").where("song","==",st.currentSong).limit(1000).onSnapshot(function(snap){
+      STATE.displayVoteCount = snap.size;
+      render();
+    }, function(){});
+  }, 500);
+}
+
 /* ===================== INIT ===================== */
 
 function init(){
   render();
+  if(window.MS_DISPLAY_MODE){
+    subscribeAdminState();
+    subscribeDisplayVoteCount();
+    return;
+  }
   if(getParticipantName()) ensureParticipantDoc();
   subscribeAdminState();
   if(STATE.isAdmin) subscribeAdminExtras();
