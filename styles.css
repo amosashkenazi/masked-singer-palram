@@ -28,6 +28,27 @@ input,select{font-family:inherit;}
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   font-size:11.5px; color:var(--ink-dim); margin-bottom:18px;
 }
+/* ---------- מסך תצוגה (display.html — מסך גדול/טלוויזיה באולם) ----------
+   בניגוד ל-.phone (שמוגבל ל-460px רוחב, כמו טלפון), כאן ממלאים את כל
+   רוחב המסך ומגדילים משמעותית את כל הטקסט/האייקונים כדי שיהיו קריאים
+   מרחוק באולם. שאר עיצוב הכרטיסים/הצבעים (card/card2/gold וכו') נשאר
+   זהה לגמרי לשאר האתר. */
+.tv-shell{
+  width:100%; min-height:100vh; box-sizing:border-box;
+  background:radial-gradient(120% 70% at 50% 18%, #2d1c58 0%, #100a20 60%);
+  display:flex; flex-direction:column; align-items:center;
+  padding:36px 48px 56px; position:relative;
+}
+.tv-shell .top-status{width:100%; max-width:1100px; font-size:16px; margin-bottom:10px;}
+.tv-shell .eyebrow{font-size:17px;}
+.tv-shell .sub{font-size:19px;}
+.tv-shell .footer-note{font-size:15px;}
+.tv-shell h1.page-title{font-size:40px;}
+.tv-shell .card, .tv-shell .card2{max-width:1100px; width:100%; margin:0 auto;}
+.tv-shell .lb-row{font-size:18px; padding:14px 18px; max-width:900px; margin-inline:auto;}
+.tv-shell .lb-row + .lb-row{margin-top:10px;}
+.tv-shell .vote-timer svg{width:96px; height:96px;}
+
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-inline-end:6px;}
 .dot.ok{background:var(--ok);}
 .dot.warn{background:var(--gold);}
@@ -70,9 +91,9 @@ h1.page-title{font-size:24px; font-weight:900; margin:6px 0 0; text-wrap:balance
 .field::placeholder{color:var(--ink-dim);}
 .field:focus{outline:none; border-color:var(--gold);}
 
-.grid-candidates{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px;}
+.grid-candidates{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:18px;}
 .cand{
-  display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px 8px;
+  display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 3px 6px;
   border-radius:14px; border:2px solid transparent; position:relative;
   /* בלי background מפורש כאן, זה כפתור (<button>) בלי צבע רקע משלו —
      הדפדפן נותן לו רקע בהיר כברירת מחדל, ואחרי שהוספנו color:inherit
@@ -81,13 +102,29 @@ h1.page-title{font-size:24px; font-weight:900; margin:6px 0 0; text-wrap:balance
   background:var(--card2);
 }
 .cand .avatar-wrap{
-  width:56px; height:56px; border-radius:50%; overflow:hidden; position:relative;
+  /* הוגדל מ-56px כדי שתמונות אמיתיות (photo ב-config.js) יהיו קריאות
+     בבירור בתוך המסגרת העגולה, ולא ייראו "מוקטנות" בתוך עיגול קטן.
+     64px נבחר כך שעדיין נשארים בבטחה בתוך 4 עמודות גם בטלפונים צרים
+     (360px) בלי לגלוש אופקית — ראו גם ה-media query למטה לרוחבים
+     צרים במיוחד. */
+  width:64px; height:64px; border-radius:50%; overflow:hidden; position:relative;
   border:2px solid var(--line-soft);
 }
 .cand .num{
-  position:absolute; top:-4px; left:-4px; width:19px; height:19px; border-radius:50%;
-  background:var(--card2); border:1px solid var(--line); font-size:9.5px; font-weight:800;
+  position:absolute; top:-5px; left:-5px; width:21px; height:21px; border-radius:50%;
+  background:var(--card2); border:1px solid var(--line); font-size:10px; font-weight:800;
   color:var(--gold2); display:flex; align-items:center; justify-content:center;
+}
+/* רשת ברוחבים צרים במיוחד (טלפונים ישנים/קטנים, מתחת ל-360px) —
+   מקטינים את מסגרת התמונה בחזרה כדי שהרשת עדיין תיכנס ב-4 עמודות
+   בלי לגלוש אופקית. avatarHTML עצמה עדיין מציירת תמונה ב-64px
+   (בתוך ה-HTML), אבל overflow:hidden על המסגרת העגולה חותך אותה
+   יפה לגודל המסגרת הקטנה יותר — בלי עיוות, רק חיתוך נדיב יותר. ברוב
+   הטלפונים המודרניים (360px ומעלה) ה-media query הזה כלל לא מופעל. */
+@media (max-width:340px){
+  .grid-candidates{gap:6px;}
+  .cand{padding:6px 1px 5px;}
+  .cand .avatar-wrap{width:56px; height:56px;}
 }
 .cand .nm{font-size:11px; font-weight:700; text-align:center; line-height:1.25;}
 .cand.sel{border-color:var(--gold); background:rgba(224,178,88,.1);}
