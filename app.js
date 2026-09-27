@@ -96,14 +96,18 @@ function makeFaceSVG(c, size){
 /* מציג תמונת photo אמיתית (מתוך config.js) כשהיא הוגדרה עבור המועמד/ת,
    ואחרת נופל חזרה לאווטאר המצויר האוטומטי — כך שהחלפת שמות/תמונות
    לפני האירוע לא דורשת שום שינוי בקובץ הזה, רק ב-config.js. */
-function avatarHTML(c, size){
+function avatarHTML(c, size, shape){
   if(!c) return "";
+  /* shape: "round" (ברירת מחדל, כמו תמיד — חשיפות/פודיום/כרטיס "הניחוש
+     שלך") או "square" (ריבוע מעוגל — משמש רק ברשת הניחוש candGridHTML,
+     כדי שהתמונה תתפוס את כל השטח בלי לאבד את הפינות לחיתוך עגול). */
+  var radius = (shape === "square") ? "16px" : "50%";
   if(c.photo){
     /* אם התמונה נכשלת בטעינה (קובץ חסר, שם/נתיב לא מדויק וכו') —
        נופלים אוטומטית בחזרה לאווטאר המצויר, במקום להציג אייקון
        תמונה שבור לקהל. */
     return '<span style="display:inline-block;width:'+size+'px;height:'+size+'px;">'+
-      '<img src="'+h(c.photo)+'" alt="'+h(c.name)+'" style="width:'+size+'px;height:'+size+'px;object-fit:cover;display:block;border-radius:50%;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
+      '<img src="'+h(c.photo)+'" alt="'+h(c.name)+'" style="width:'+size+'px;height:'+size+'px;object-fit:cover;display:block;border-radius:'+radius+';" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
       '<span style="display:none;">'+makeFaceSVG(c,size)+'</span>'+
     '</span>';
   }
@@ -477,7 +481,7 @@ function candGridHTML(list, selectedGetter, actionName){
     var c = list[i];
     var sel = selectedGetter() === c.n;
     out += '<button type="button" class="cand'+(sel?' sel':'')+'" data-action="'+actionName+'" data-n="'+c.n+'">'+
-      '<div class="avatar-wrap">'+avatarHTML(c,64)+'<div class="num">'+c.n+'</div></div>'+
+      '<div class="avatar-wrap">'+avatarHTML(c,68,"square")+'<div class="num">'+c.n+'</div></div>'+
       '<div class="nm">'+h(c.name)+'</div>'+
       '<div class="check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#241300" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'+
     '</button>';
@@ -608,12 +612,19 @@ function viewVoting(st){
   }
 
   if(!st.votingOpen){
+    /* votingOpenedAt נשאר שמור גם אחרי שההצבעה נסגרת (בין אם המנחה
+       סגר ידנית ובין אם 60 השניות פשוט נגמרו) — כך אפשר להבדיל בין
+       "עוד לא נפתחה בכלל" (votingOpenedAt ריק) לבין "נפתחה וכבר נגמר
+       הזמן" (votingOpenedAt קיים). מתאפס ל-null כשעוברים לשיר הבא
+       (ראו admin-set-song), כדי שהבדיקה הזו תמיד תשקף את השיר הנוכחי. */
+    var timeUp = !!st.votingOpenedAt;
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       songBadgeHTML(song,70)+
-      '<h1 class="page-title" style="margin-top:18px; font-size:26px;">ההצבעה עוד לא נפתחה</h1>'+
-      '<div class="sub">ביצוע '+song.id+' מתוך 6 · '+h(song.name)+'<br>ההצבעה תיפתח מיד לאחר סיום השיר</div>'+
-    '</div>';
+      '<h1 class="page-title" style="margin-top:18px; font-size:26px;">'+(timeUp ? "הסתיים זמן ההצבעה" : "ההצבעה עוד לא נפתחה")+'</h1>'+
+      '<div class="sub">ביצוע '+song.id+' מתוך 6 · '+h(song.name)+(timeUp ? '' : '<br>ההצבעה תיפתח מיד לאחר סיום השיר')+'</div>'+
+    '</div>'+
+    (timeUp ? '<div class="spacer"></div><div class="card2" style="display:flex; align-items:center; gap:10px; justify-content:center;"><span class="dot warn"></span><span style="font-size:13.5px; color:var(--ink-dim);">ממתינים להמשך…</span></div>' : '');
   }
 
   /* כותרת גדולה ומודגשת שממקדת מי בעל החיים שמנחשים עליו כרגע —
@@ -630,7 +641,6 @@ function viewVoting(st){
     '</div>'+
     votingCountdownHTML(st, 46)+
   '</div>'+
-  '<div class="sub" style="margin-top:10px;">מי מסתתר מתחת למסכה?</div>'+
   candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
   /* מרווח בתחתית כדי שהשורה האחרונה של המועמדים לא תיחבא מאחורי
      סרגל השליחה הקבוע (ראו למטה). */
@@ -1421,7 +1431,10 @@ function onAppClick(e){
     if(!database) return;
     STATE.adminView = "stage";
     render();
-    database.doc("state/admin").update({stage:"voting", currentSong:Number(el.dataset.n), votingOpen:false});
+    /* מאפסים גם את votingOpenedAt כדי שמעבר לשיר חדש לא "יזכור" בטעות
+       שההצבעה כבר נפתחה/הסתיימה עבור השיר הקודם (ראו viewVoting —
+       ה-flag הזה הוא מה שמבדיל בין "עוד לא נפתחה" ל"הסתיים זמן ההצבעה"). */
+    database.doc("state/admin").update({stage:"voting", currentSong:Number(el.dataset.n), votingOpen:false, votingOpenedAt:null});
   } else if(action === "admin-toggle-voting"){
     if(!database) return;
     var openNow = el.dataset.open === "1";
