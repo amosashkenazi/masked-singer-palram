@@ -1497,7 +1497,7 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
+  database.doc("state/admin").set({stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
   ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -1525,7 +1525,7 @@ function subscribeAdminState(){
     if(snap.exists){
       STATE.adminState = snap.data();
     } else {
-      STATE.adminState = {stage:"voting", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
+      STATE.adminState = {stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
       if(STATE.isAdmin && !ensuredAdminDoc){
         ensuredAdminDoc = true;
         database.doc("state/admin").set(STATE.adminState);
