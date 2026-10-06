@@ -102,6 +102,18 @@ function avatarHTML(c, size, shape){
      שלך") או "square" (ריבוע מעוגל — משמש רק ברשת הניחוש candGridHTML,
      כדי שהתמונה תתפוס את כל השטח בלי לאבד את הפינות לחיתוך עגול). */
   var radius = (shape === "square") ? "16px" : "50%";
+  /* ברשת הניחוש (shape === "square"): מציגים את התמונה כולה בלי חיתוך
+     (object-fit:contain) מעל עותק מטושטש של אותה תמונה שממלא את שאר
+     המסגרת — כך תמונות מצולמות מקרוב או בפרופורציה שונה לא נחתכות.
+     אם רוצים בכל זאת חיתוך (cover) למועמד/ת מסוים/ת, מוסיפים
+     photoFit:"cover" ב-config.js. */
+  if(c.photo && shape === "square" && c.photoFit !== "cover"){
+    return '<span class="sq">'+
+      '<img class="sq-bg" src="'+h(c.photo)+'" alt="" aria-hidden="true">'+
+      '<img class="sq-fg" src="'+h(c.photo)+'" alt="'+h(c.name)+'" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
+      '<span class="sq-fallback" style="display:none;">'+makeFaceSVG(c,size)+'</span>'+
+    '</span>';
+  }
   if(c.photo){
     /* אם התמונה נכשלת בטעינה (קובץ חסר, שם/נתיב לא מדויק וכו') —
        נופלים אוטומטית בחזרה לאווטאר המצויר, במקום להציג אייקון
