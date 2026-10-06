@@ -489,7 +489,8 @@ function candGridHTML(list, selectedGetter, actionName){
     var c = list[i];
     var sel = selectedGetter() === c.n;
     out += '<button type="button" class="cand'+(sel?' sel':'')+'" data-action="'+actionName+'" data-n="'+c.n+'">'+
-      '<div class="avatar-wrap">'+avatarHTML(c,68,"square")+'<div class="num">'+c.n+'</div></div>'+
+      '<div class="avatar-wrap">'+avatarHTML(c,68,"square")+'</div>'+
+      '<div class="num">'+c.n+'</div>'+
       '<div class="nm">'+h(c.name)+'</div>'+
       '<div class="check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#241300" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'+
     '</button>';
