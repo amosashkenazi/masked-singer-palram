@@ -33,7 +33,7 @@ LOGO_URL: "LOGO.jpg",
 
   CANDIDATES: [
     {n:1,  name:"מיכאל פליישמן",  photo:"photos/1.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:2,  name:"ישראל עוזרי",  photo:"photos/2.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
+    {n:2,  name:"דניאל פריינטה",  photo:"photos/2.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:3,  name:"אחמד זידאן",  photo:"photos/3.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:4,  name:"תאאר טאהא",  photo:"photos/4.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:5,  name:"זאיד כעביה",  photo:"photos/5.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
