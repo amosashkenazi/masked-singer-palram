@@ -103,14 +103,14 @@ function avatarHTML(c, size, shape){
      כדי שהתמונה תתפוס את כל השטח בלי לאבד את הפינות לחיתוך עגול). */
   var radius = (shape === "square") ? "16px" : "50%";
   /* ברשת הניחוש (shape === "square"): טוענים תמונה ממוזערת קלה
-     (photos/thumb/<אותו שם>) שכבר מכילה בתוכה את כל התמונה בלי חיתוך
+     (t_<שם הקובץ>) שכבר מכילה בתוכה את כל התמונה בלי חיתוך
      על רקע מטושטש — במקום להוריד את התמונה המלאה לכל אחד מ-20 האריחים.
      אם הממוזערת חסרה, נופלים לתמונה המלאה, ואם גם היא חסרה — לאווטאר
      המצויר. loading=lazy + decoding=async מונעים מהטלפון להיתקע בטעינה.
      אם רוצים חיתוך (cover) למועמד/ת מסוים/ת, מוסיפים photoFit:"cover"
      ב-config.js. */
   if(c.photo && shape === "square" && c.photoFit !== "cover"){
-    var thumb = String(c.photo).replace(/^photos\//, "photos/thumb/");
+    var thumb = String(c.photo).replace(/([^\/]*)$/, "t_$1"); /* תמונה ממוזערת: אותו שם עם הקידומת t_ באותה תיקייה */
     return '<span class="sq">'+
       '<img src="'+h(thumb)+'" alt="'+h(c.name)+'" loading="lazy" decoding="async" data-full="'+h(c.photo)+'" '+
         'onerror="if(this.dataset.full&&this.src.indexOf(this.dataset.full)===-1){this.src=this.dataset.full;}else{this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';}">'+
