@@ -151,7 +151,7 @@ LOGO_URL: "LOGO.jpg",
     {n:117,  name:"מתן טל",  photo:"photos/117.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:118,  name:"ולאד אוסטרובסקי",  photo:"photos/118.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
     {n:119,  name:"איתי ליכט",  photo:"photos/119.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false},
-    {n:120,  name:"קובי זגורי",  photo:"photos/120.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false}
+    {n:120,  name:"ניצן ברדר",  photo:"photos/120.jpg", skin:"#e0ac69", hair_color:"#2c2c2c", hair_style:"buzz", facial_hair:"none", glasses:false}
   ],
 
   /* ⚠️ שימו לב: הערכים כאן למטה הם עדיין ה-דוגמה הכללית מה-README,
