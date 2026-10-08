@@ -1693,4 +1693,199 @@ function ensureParticipantDoc(){
 
 var ensuredAdminDoc = false;
 function subscribeAdminState(){
-  var datab
+  var database = getDb();
+  if(!database){
+    setTimeout(subscribeAdminState, 400);
+    return;
+  }
+  database.doc("state/admin").onSnapshot(function(snap){
+    STATE.connStatus = "ok";
+    if(snap.exists){
+      STATE.adminState = snap.data();
+    } else {
+      STATE.adminState = {stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, winnersStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
+      if(STATE.isAdmin && !ensuredAdminDoc){
+        ensuredAdminDoc = true;
+        database.doc("state/admin").set(STATE.adminState);
+      }
+    }
+    var st = STATE.adminState;
+
+    /* אם המנהל ביצע "איפוס האירוע" מאז שהמכשיר הזה נכנס בפעם האחרונה —
+       resetEpoch ישתנה, ואנחנו שוכחים את הזהות המקומית (שם/הצבעות)
+       כדי שהמשתתף/ת יחזרו למסך הקלדת השם ולא "יופיעו" ברשימות בלי
+       שבאמת השתתפו אחרי האיפוס. */
+    if(st.resetEpoch){
+      var localEpoch = getLocalEpoch();
+      if(localEpoch && localEpoch !== String(st.resetEpoch)){
+        forgetParticipantIdentity();
+      }
+      setLocalEpoch(st.resetEpoch);
+    }
+
+    if(st.stage === "voting" && STATE.myVotes[st.currentSong] === undefined && getParticipantName()){
+      fetchMyVote(st.currentSong);
+    }
+    if((st.stage === "reveal" || st.stage === "summary") && getParticipantName()){
+      fetchAllMyVotes();
+    }
+    if(st.stage === "finalVote" && STATE.myBest === null && getParticipantName()){
+      fetchMyBest();
+    }
+    if(st.stage === "warmup" && STATE.myWarmup === undefined && getParticipantName()){
+      fetchMyWarmup();
+    }
+    render();
+  }, function(err){
+    STATE.connStatus = "error";
+    render();
+  });
+}
+
+function fetchMyVote(song){
+  var database = getDb();
+  if(!database) return;
+  database.doc("votes/"+song+"_"+pid).get().then(function(snap){
+    STATE.myVotes[song] = snap.exists ? snap.data().candidate : null;
+    render();
+  });
+}
+function fetchAllMyVotes(){
+  var database = getDb();
+  if(!database) return;
+  var missing = SONGS.filter(function(s){ return STATE.myVotes[s.id] === undefined; });
+  if(!missing.length) return;
+  Promise.all(missing.map(function(s){
+    return database.doc("votes/"+s.id+"_"+pid).get().then(function(snap){
+      STATE.myVotes[s.id] = snap.exists ? snap.data().candidate : null;
+    });
+  })).then(render);
+}
+function fetchMyBest(){
+  var database = getDb();
+  if(!database) return;
+  database.doc("bestVotes/"+pid).get().then(function(snap){
+    STATE.myBest = snap.exists ? snap.data().song : null;
+    render();
+  });
+}
+function fetchMyWarmup(){
+  var database = getDb();
+  if(!database) return;
+  database.doc("warmupVotes/"+pid).get().then(function(snap){
+    STATE.myWarmup = snap.exists ? snap.data().choice : null;
+    render();
+  });
+}
+
+var warmupWriteTimer = null, warmupPendingCounts = null, warmupLastWrite = 0;
+function scheduleWarmupCountsWrite(database, data){
+  warmupPendingCounts = data;
+  if(warmupWriteTimer) return;
+  var wait = Math.max(0, 3000 - (Date.now() - warmupLastWrite));
+  warmupWriteTimer = setTimeout(function(){
+    warmupWriteTimer = null;
+    warmupLastWrite = Date.now();
+    database.doc("state/admin").update({warmupCounts: warmupPendingCounts});
+  }, wait);
+}
+
+var adminExtrasStarted = false;
+function subscribeAdminExtras(){
+  if(adminExtrasStarted) return;
+  var database = getDb();
+  if(!database){
+    setTimeout(subscribeAdminExtras, 400);
+    return;
+  }
+  adminExtrasStarted = true;
+  database.collection("participants").limit(1000).onSnapshot(function(snap){
+    STATE.adminParticipantCount = snap.size;
+    STATE.adminParticipants = snap.docs.map(function(d){
+      var data = d.data() || {};
+      return {id:d.id, name:data.name || "", joinedAt: data.joinedAt || 0};
+    }).sort(function(a,b){ return a.joinedAt - b.joinedAt; });
+    render();
+  }, function(){});
+
+  /* תוצאות שאלת החימום מתעדכנות חי, בלי קשר לשלב הנוכחי — כך שגם
+     אחרי שעוברים הלאה, אפשר לחזור ולהציג את התוצאות המצטברות. */
+  database.collection("warmupVotes").limit(1000).onSnapshot(function(snap){
+    var counts = {};
+    snap.docs.forEach(function(d){
+      var data = d.data() || {};
+      if(data.choice != null) counts[data.choice] = (counts[data.choice]||0) + 1;
+    });
+    STATE.adminWarmup = {total: snap.size, counts: counts};
+    /* הקהל מציג את ההתפלגות מתוך state/admin.warmupCounts, אבל רק
+       כשהמנהל/ת בחר/ה להציג אותה. לכן כותבים לשם רק בזמן שהתוצאות
+       גלויות — ואז לכל היותר פעם אחת בכמה שניות — ולא על כל תשובה
+       שמגיעה (כל כתיבה כזו נשלחת ל-250 הטלפונים). ברגע שהמנהל/ת
+       מציג/ה את התוצאות, הספירה הנוכחית נכתבת יחד עם הדגל. */
+    if(STATE.adminState && STATE.adminState.warmupResultsVisible){
+      scheduleWarmupCountsWrite(database, {total: snap.size, counts: counts});
+    }
+    render();
+  }, function(){});
+
+  var lastSong = null;
+  var unsubVotes = null;
+  var interval = setInterval(function(){
+    var st = STATE.adminState;
+    if(!st || st.stage !== "voting"){ return; }
+    if(st.currentSong === lastSong) return;
+    lastSong = st.currentSong;
+    if(unsubVotes) unsubVotes();
+    unsubVotes = database.collection("votes").where("song","==",st.currentSong).limit(1000).onSnapshot(function(snap){
+      STATE.adminVoteCount = snap.size;
+      render();
+    }, function(){});
+  }, 500);
+}
+
+/* מקבילה מצומצמת ל"מעקב אחר ספירת הצבעות חי לשיר הנוכחי" מתוך
+   subscribeAdminExtras, אבל רק לצורך הזה — בלי מנוי participants/
+   warmupVotes ובלי הכתיבה החוזרת ל-state/admin.warmupCounts, שהיא
+   באחריות מסך הניהול בלבד (subscribeAdminExtras למעלה). מסך התצוגה
+   (display.html) קורא לזה במקום ל-subscribeAdminExtras. */
+var displayVoteCountStarted = false;
+function subscribeDisplayVoteCount(){
+  if(displayVoteCountStarted) return;
+  var database = getDb();
+  if(!database){
+    setTimeout(subscribeDisplayVoteCount, 400);
+    return;
+  }
+  displayVoteCountStarted = true;
+  var lastSong = null;
+  var unsubVotes = null;
+  setInterval(function(){
+    var st = STATE.adminState;
+    if(!st || st.stage !== "voting"){ return; }
+    if(st.currentSong === lastSong) return;
+    lastSong = st.currentSong;
+    if(unsubVotes) unsubVotes();
+    unsubVotes = database.collection("votes").where("song","==",st.currentSong).limit(1000).onSnapshot(function(snap){
+      STATE.displayVoteCount = snap.size;
+      render();
+    }, function(){});
+  }, 500);
+}
+
+/* ===================== INIT ===================== */
+
+function init(){
+  render();
+  if(window.MS_DISPLAY_MODE){
+    subscribeAdminState();
+    subscribeDisplayVoteCount();
+    return;
+  }
+  if(getParticipantName()) ensureParticipantDoc();
+  subscribeAdminState();
+  if(STATE.isAdmin) subscribeAdminExtras();
+}
+
+init();
+
+})();
