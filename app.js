@@ -38,11 +38,6 @@ var WELCOME_TITLE = window.MS_CONFIG.WELCOME_TITLE || "ברוכים הבאים �
    דבר בדיוק כמו תמונות המועמדים ב-photos/). אם לא הוגדר, או שהקובץ
    נכשל בטעינה, נופלים אוטומטית בחזרה לאייקון המצויר. */
 var LOGO_URL = window.MS_CONFIG.LOGO_URL || "";
-/* משך ההצבעה (בשניות) על כל אחד מששת הביצועים — לאחר שהמנהל/ת פותח/ת
-   הצבעה, שעון עצר רץ לקהל ולמנהל/ת, ובתום הזמן ההצבעה ננעלת אוטומטית
-   (ראו votingTicker בהמשך הקובץ). אפשר לשנות ב-config.js תחת
-   VOTING_DURATION_SEC בלי לגעת בקוד. */
-var VOTING_DURATION_SEC = window.MS_CONFIG.VOTING_DURATION_SEC || 60;
 /* שאלת חימום אופציונלית לפני תחילת ההצבעות — אם לא הוגדרה ב-config.js,
    WARMUP_OPTIONS יהיה ריק והשלב פשוט לא יציג שום שאלה. */
 var WARMUP_QUESTION = window.MS_CONFIG.WARMUP_QUESTION || "";
@@ -160,64 +155,6 @@ function songBadgeHTML(song, size){
     '</div>';
   }
   return '<div class="song-icon-badge" style="width:'+size+'px;height:'+size+'px;background:'+song.bg+';">'+icon+'</div>';
-}
-
-/* ===================== שעון עצר להצבעה ===================== */
-
-/* כמה שניות נותרו להצבעה הנוכחית, לפי votingOpenedAt שנשמר ב-state/admin
-   כשההצבעה נפתחה. מחזירה null אם ההצבעה לא פתוחה או שאין זמן פתיחה
-   שמור (למשל הצבעה שנפתחה בגרסה ישנה של הקוד, לפני התוספת הזו). */
-function votingSecondsLeft(st){
-  if(!st || !st.votingOpen || !st.votingOpenedAt) return null;
-  var elapsedSec = (Date.now() - st.votingOpenedAt) / 1000;
-  return Math.max(0, VOTING_DURATION_SEC - elapsedSec);
-}
-
-/* שעון עצר עגול בלי ספרות — טבעת שמתרוקנת בהדרגה מירוק לאדום, בדיוק
-   כמו טיימר "פאי". חשוב: זו אנימציית CSS טהורה (ראו vote-timer-arc
-   ב-styles.css) שרצה בעצמה על המכשיר ברגע שהיא מצוירת — היא לא
-   דורשת שום רינדור חוזר מה-JS כדי "לזוז". animation-delay שלילי,
-   שווה לזמן שכבר חלף, קופץ אותה מיד לנקודה הנכונה גם אם המכשיר
-   הצטרף באמצע ההצבעה. ה"קפיצה" הזאת קורית פעם אחת ברגע שהמסך מצויר
-   (למשל כשההצבעה נפתחת), ומשם והלאה שום דבר אחר במסך (כולל תמונות
-   המועמדים) לא מתעדכן/מהבהב בשביל השעון. */
-function votingCountdownHTML(st, size){
-  var left = votingSecondsLeft(st);
-  if(left == null) return "";
-  var elapsed = Math.max(0, VOTING_DURATION_SEC - left);
-  var r = 26, circumference = 2 * Math.PI * r; // r=26 קבוע — תואם את ה-stroke-dashoffset הסופי שקבוע ב-CSS, בלי קשר לגודל התצוגה בפועל (viewBox תמיד 0 0 64 64; size רק קובע כמה גדול זה מצטייר על המסך)
-  var s = size || 64;
-  return '<div class="vote-timer">'+
-    '<svg width="'+s+'" height="'+s+'" viewBox="0 0 64 64">'+
-      '<circle cx="32" cy="32" r="'+r+'" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="10"/>'+
-      '<circle class="vote-timer-arc" cx="32" cy="32" r="'+r+'" fill="none" stroke-width="10" stroke-linecap="round" '+
-        'style="stroke-dasharray:'+circumference.toFixed(2)+'; animation-duration:'+VOTING_DURATION_SEC+'s; animation-delay:-'+elapsed.toFixed(2)+'s;"></circle>'+
-    '</svg>'+
-  '</div>';
-}
-
-/* טיקר גלובלי: פועם כל שנייה כל עוד שלב ההצבעה פעיל, אך ורק כדי
-   לבדוק אם עברה דקה (VOTING_DURATION_SEC) מאז שההצבעה נפתחה, ואם כן
-   לנעול אותה אוטומטית ב-state/admin. חשוב: הוא בכוונה *לא* קורא ל-
-   render() — התצוגה (כולל שעון העצר עצמו) מתעדכנת דרך CSS או דרך
-   ה-onSnapshot הרגיל על state/admin, כך שאין כאן שום רינדור-יתר
-   שעלול להבהב תמונות או למחוק טקסט שמישהו/י באמצע להקליד. כתיבה
-   כפולה על ידי כמה מכשירים בו-זמנית היא בלתי מזיקה, כי התוצאה זהה. */
-var votingTickerStarted = false;
-function startVotingTicker(){
-  if(votingTickerStarted) return;
-  votingTickerStarted = true;
-  setInterval(function(){
-    var st = STATE.adminState;
-    if(!st || st.stage !== "voting" || !st.votingOpen || !st.votingOpenedAt) return;
-    var left = votingSecondsLeft(st);
-    if(left != null && left <= 0){
-      var database = getDb();
-      if(database){
-        database.doc("state/admin").update({votingOpen:false});
-      }
-    }
-  }, 1000);
 }
 
 function uid(){
@@ -343,6 +280,7 @@ function renderAudience(){
     else if(st.stage === "finalVote") inner = viewFinalVote();
     else if(st.stage === "reveal") inner = viewReveal(st);
     else if(st.stage === "podium") inner = viewPodium(st);
+    else if(st.stage === "winners") inner = viewWinners(st);
     else if(st.stage === "summary") inner = viewSummary(st);
     else if(st.stage === "leaderboards") inner = viewLeaderboards(st);
     else inner = viewLoading("ממתינים לתחילת הערב…");
@@ -377,6 +315,7 @@ function renderDisplay(){
     else if(st.stage === "finalVote") inner = viewDisplayHolding("ההצבעה על הביצוע הכי טוב של הערב פתוחה כעת בטלפונים של הקהל");
     else if(st.stage === "reveal") inner = viewDisplayReveal(st);
     else if(st.stage === "podium") inner = viewPodium(st);
+    else if(st.stage === "winners") inner = viewWinners(st, true);
     else if(st.stage === "summary") inner = viewDisplayHolding("כל אחד/ת רואה עכשיו בטלפון שלו/ה את התוצאה האישית של הערב");
     else if(st.stage === "leaderboards") inner = viewLeaderboards(st);
     else inner = viewLoading("ממתינים לתחילת הערב…");
@@ -425,7 +364,6 @@ function viewDisplayVoting(st){
       '<h1 class="page-title" style="font-size:42px; margin-top:4px;">'+h(song.name)+'</h1>'+
     '</div>'+
   '</div>'+
-  '<div style="margin-top:26px; display:flex; justify-content:center;">'+votingCountdownHTML(st)+'</div>'+
   '<div class="sub" style="text-align:center; margin-top:18px; font-size:20px; font-weight:800; color:var(--gold2);">'+
     (cnt==null ? "סופרים הצבעות…" : cnt+' הצביעו עד כה')+
   '</div>'+
@@ -627,7 +565,6 @@ function viewVoting(st){
        מאפשרים להתחרט ולבחור מחדש — לחיצה פשוט פותחת שוב את רשת
        הבחירה, עם הבחירה הקודמת מסומנת; שליחה חוזרת דורסת (set) את
        אותה רשומת הצבעה, כולל עדכון זמן ההצבעה. */
-    (st.votingOpen ? '<div style="margin-top:16px; display:flex; justify-content:center;">'+votingCountdownHTML(st, 46)+'</div>' : '')+
     (st.votingOpen ?
       '<div style="margin-top:14px;"><button type="button" class="btn btn-outline" data-action="change-vote" style="width:100%;">שינוי הניחוש</button></div>'
     : '')+
@@ -637,15 +574,14 @@ function viewVoting(st){
 
   if(!st.votingOpen){
     /* votingOpenedAt נשאר שמור גם אחרי שההצבעה נסגרת (בין אם המנחה
-       סגר ידנית ובין אם 60 השניות פשוט נגמרו) — כך אפשר להבדיל בין
-       "עוד לא נפתחה בכלל" (votingOpenedAt ריק) לבין "נפתחה וכבר נגמר
-       הזמן" (votingOpenedAt קיים). מתאפס ל-null כשעוברים לשיר הבא
+       סגר ידנית) — כך אפשר להבדיל בין "עוד לא נפתחה בכלל"
+       (votingOpenedAt ריק) לבין "נפתחה וכבר נסגרה" (votingOpenedAt קיים). מתאפס ל-null כשעוברים לשיר הבא
        (ראו admin-set-song), כדי שהבדיקה הזו תמיד תשקף את השיר הנוכחי. */
     var timeUp = !!st.votingOpenedAt;
     return ''+
     '<div style="margin-top:16vh; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
       songBadgeHTML(song,70)+
-      '<h1 class="page-title" style="margin-top:18px; font-size:26px;">'+(timeUp ? "הסתיים זמן ההצבעה" : "ההצבעה עוד לא נפתחה")+'</h1>'+
+      '<h1 class="page-title" style="margin-top:18px; font-size:26px;">'+(timeUp ? "ההצבעה נסגרה" : "ההצבעה עוד לא נפתחה")+'</h1>'+
       '<div class="sub">ביצוע '+song.id+' מתוך 6 · '+h(song.name)+(timeUp ? '' : '<br>ההצבעה תיפתח מיד לאחר סיום השיר')+'</div>'+
     '</div>'+
     (timeUp ? '<div class="spacer"></div><div class="card2" style="display:flex; align-items:center; gap:10px; justify-content:center;"><span class="dot warn"></span><span style="font-size:13.5px; color:var(--ink-dim);">ממתינים להמשך…</span></div>' : '');
@@ -663,7 +599,6 @@ function viewVoting(st){
       '<span class="eyebrow">ביצוע '+song.id+' מתוך 6</span>'+
       '<h1 class="page-title" style="font-size:26px; margin-top:2px; overflow-wrap:break-word; word-break:break-word;">'+h(song.name)+'</h1>'+
     '</div>'+
-    votingCountdownHTML(st, 46)+
   '</div>'+
   candGridHTML(candidatesForSong(song), function(){return STATE.selectedCandidate;}, "pick-candidate")+
   /* מרווח בתחתית כדי שהשורה האחרונה של המועמדים לא תיחבא מאחורי
@@ -902,6 +837,71 @@ function viewPodium(st){
   '</div>';
 }
 
+/* ===================== פודיום — המנחשים המובילים בקהל (מקום 3, 2, 1) ===================== */
+
+/* חושפת את שלושת המשתתפים/ות שניחשו הכי טוב את מי שהסתתר מתחת
+   למסכות — מקום אחד בכל פעם (שלישי → שני → ראשון), לפי winnersStep
+   ב-state/admin שהמנהל/ת שולט/ת בו, בדיוק כמו הפודיום של הביצועים.
+   הדירוג מגיע מ-loadStats (rankedParticipants): קודם לפי מספר ניחושים
+   נכונים, ובשוויון לפי מהירות המענה. tv=true מגדיל את הכל למסך האולם. */
+function ensureFreshWinnersStats(st){
+  /* פעם אחת בכניסה לשלב: מחשבים את הדירוג מחדש, כדי שלא יוצג דירוג
+     ישן שחושב לפני שכל החשיפות הסתיימו או לפני הצבעות מאוחרות. */
+  if(!STATE.winnersStatsFresh && !STATE.statsLoading){
+    STATE.winnersStatsFresh = true;
+    STATE.stats = null;
+  }
+  if(STATE.statsLoading || !STATE.stats){
+    if(!STATE.statsLoading) loadStats(st);
+    return true;
+  }
+  return false;
+}
+
+function winnerInitials(name){
+  var parts = String(name||"").trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return "?";
+  return parts.length > 1 ? (parts[0].charAt(0) + parts[1].charAt(0)) : parts[0].slice(0,2);
+}
+
+function viewWinners(st, tv){
+  if(ensureFreshWinnersStats(st)) return viewLoading("סופרים ניחושים…");
+  var ranked = STATE.stats.rankedParticipants || [];
+  var step = st.winnersStep || 0;
+  var big = !!tv;
+  if(!step){
+    return ''+
+    '<div style="margin-top:'+(big?'20vh':'18vh')+'; display:flex; flex-direction:column; align-items:center; text-align:center;">'+
+      '<div class="eyebrow">המנחשים המובילים של הערב</div>'+
+      '<h1 class="page-title" style="font-size:'+(big?'44':'26')+'px; margin-top:6px;">מיד חושפים את הזוכים…</h1>'+
+      '<div class="sub">'+(big?'מי זיהה הכי טוב את מי שמתחת למסכות?':'עקבו אחרי המסך הראשי באולם')+'</div>'+
+    '</div>';
+  }
+  var placeMap = {1:{idx:2,label:"מקום שלישי 🥉"}, 2:{idx:1,label:"מקום שני 🥈"}, 3:{idx:0,label:"מקום ראשון 🏆"}};
+  var cur = placeMap[step] || placeMap[3];
+  var w = ranked[cur.idx];
+  if(!w){
+    return viewLoading("אין מספיק משתתפים כדי להציג את הפודיום…");
+  }
+  var isMe = !tv && w.pid === pid;
+  /* שוויון בניחושים עם השכן/ה בדירוג — מסבירים שההכרעה היתה לפי מהירות */
+  var prev = ranked[cur.idx-1], next = ranked[cur.idx+1];
+  var tied = (prev && prev.correct === w.correct) || (next && next.correct === w.correct);
+  var size = big ? 190 : 150;
+  return ''+
+  '<div style="text-align:center; margin-top:'+(big?'5vh':'6vh')+';">'+
+    '<div class="eyebrow">המנחשים המובילים של הערב</div>'+
+    '<h1 class="page-title" style="margin-top:6px;'+(big?' font-size:50px;':'')+'">'+cur.label+'</h1>'+
+    '<div class="hero-avatar" style="width:'+size+'px;height:'+size+'px;margin-top:22px;border:'+(big?'4':'3')+'px solid var(--gold);">'+
+      '<span style="font-size:'+(big?'72':'56')+'px; font-weight:900; color:var(--gold2);">'+h(winnerInitials(w.name))+'</span>'+
+    '</div>'+
+    '<h1 class="page-title" style="margin-top:20px;'+(big?' font-size:46px;':'')+'">'+h(w.name)+'</h1>'+
+    '<div class="sub" style="font-weight:800; color:var(--gold2); font-size:'+(big?'26':'18')+'px;">'+w.correct+' מתוך '+SONGS.length+' ניחושים נכונים</div>'+
+    (tied ? '<div class="sub" style="margin-top:6px;">שוויון בניחושים — ההכרעה לפי מהירות המענה</div>' : '')+
+    (isMe ? '<div class="result-banner ok" style="margin-top:20px;">זה/זו את/ה! כל הכבוד 🎉</div>' : '')+
+  '</div>';
+}
+
 /* ===================== STATS AGGREGATION ===================== */
 
 function loadStats(st){
@@ -1094,6 +1094,7 @@ function adminSidebar(st){
         stageBtn("הצבעה לביצוע הכי טוב", STATE.adminBrowseStage==="finalVote", "admin-set-stage", 'data-stage="finalVote"')+
         stageBtn("רצף חשיפות", STATE.adminBrowseStage==="reveal", "admin-set-stage", 'data-stage="reveal"')+
         stageBtn("פודיום — הביצוע הכי טוב", STATE.adminBrowseStage==="podium", "admin-set-stage", 'data-stage="podium"')+
+        stageBtn("פודיום — המנחשים המובילים", STATE.adminBrowseStage==="winners", "admin-set-stage", 'data-stage="winners"')+
         stageBtn("סיכום אישי לקהל", STATE.adminBrowseStage==="summary", "admin-set-stage", 'data-stage="summary"')+
         stageBtn("לוחות תוצאות", STATE.adminBrowseStage==="leaderboards", "admin-set-stage", 'data-stage="leaderboards"')+
       '</div>'+
@@ -1198,9 +1199,8 @@ function adminMain(st){
           '<div style="font-size:12.5px; color:var(--ink-dim);">הצבעות שהתקבלו לביצוע זה</div>'+
           '<div style="font-size:34px; font-weight:900; margin-top:6px; font-variant-numeric:tabular-nums;">'+(cnt==null?'…':cnt)+'</div>'+
         '</div>'+
-        (st.votingOpen ? '<div class="card" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 22px;"><div style="font-size:12.5px; color:var(--ink-dim);">זמן שנותר</div>'+votingCountdownHTML(st)+'</div>' : '')+
       '</div>'+
-      '<div class="sub" style="margin-top:22px;">מצב הצבעה: <b style="color:'+(st.votingOpen?"var(--ok)":"var(--bad)")+';">'+(st.votingOpen?'פתוחה':'סגורה')+'</b>'+(st.votingOpen?' — ננעלת אוטומטית בתום '+VOTING_DURATION_SEC+' שניות, ואפשר גם לסגור ידנית לפני כן.':'')+'</div>'+
+      '<div class="sub" style="margin-top:22px;">מצב הצבעה: <b style="color:'+(st.votingOpen?"var(--ok)":"var(--bad)")+';">'+(st.votingOpen?'פתוחה':'סגורה')+'</b>'+(st.votingOpen?' — נשארת פתוחה עד שתלחצו על "סגירת הצבעה".':'')+'</div>'+
     '</div>';
   }
 
@@ -1307,6 +1307,37 @@ function adminMain(st){
         '<button class="btn btn-outline" style="width:auto; padding:14px 18px; color:var(--bad); border-color:rgba(226,131,111,.4);" data-action="admin-podium-step" data-step="0">איפוס פודיום</button>'+
       '</div>'+
       '<div class="sub" style="margin-top:14px;">מצב נוכחי בקהל: <b style="color:var(--gold2);">'+pStatusLabel+'</b></div>'+
+    '</div>';
+  }
+
+  if(STATE.adminBrowseStage === "winners"){
+    if(ensureFreshWinnersStats(st)){
+      return '<div class="admin-main">'+viewLoading("סופרים ניחושים…")+'</div>';
+    }
+    var wRanked = STATE.stats.rankedParticipants || [];
+    var wRowsA = wRanked.slice(0,10).map(function(p,i){
+      return '<div class="row-card">'+
+        '<div style="width:26px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
+        '<div style="flex:1; font-weight:700; font-size:13.5px;">'+h(p.name)+'</div>'+
+        '<div style="font-size:12px; font-weight:800; color:var(--gold2);">'+p.correct+'/'+SONGS.length+'</div>'+
+      '</div>';
+    }).join("") || '<div class="sub">אין עדיין משתתפים עם ניחושים.</div>';
+    var wStep = st.winnersStep || 0;
+    var wStatusLabel = wStep===0 ? "טרם נחשף דבר" : (wStep===1 ? "מקום שלישי גלוי לקהל" : (wStep===2 ? "מקום שני גלוי לקהל" : "מקום ראשון גלוי לקהל"));
+    return '<div class="admin-main">'+
+      '<div class="admin-h">פודיום — המנחשים המובילים</div>'+
+      '<h1 class="page-title">חשיפת הזוכים בקהל</h1>'+
+      liveNoticeHTML(st, "winners")+
+      '<div class="sub">הדירוג (10 הראשונים) גלוי רק לך. בשוויון בניחושים נקבע המקום לפי מהירות המענה. לוחצים בסדר — שלישי, שני, ראשון — כדי לחשוף לקהל מקום אחרי מקום, כל אחד במסך נפרד.</div>'+
+      '<div style="margin-top:16px; max-width:420px;">'+wRowsA+'</div>'+
+      '<div style="display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;">'+
+        '<button class="btn '+(wStep===1?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-winners-step" data-step="1">חשיפת מקום שלישי</button>'+
+        '<button class="btn '+(wStep===2?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-winners-step" data-step="2">חשיפת מקום שני</button>'+
+        '<button class="btn '+(wStep===3?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-winners-step" data-step="3">חשיפת מקום ראשון</button>'+
+        '<button class="btn btn-outline" style="width:auto; padding:14px 18px; color:var(--bad); border-color:rgba(226,131,111,.4);" data-action="admin-winners-step" data-step="0">איפוס</button>'+
+        '<button class="btn btn-outline" style="width:auto; padding:14px 18px;" data-action="admin-winners-refresh">חישוב מחדש</button>'+
+      '</div>'+
+      '<div class="sub" style="margin-top:14px;">מצב נוכחי בקהל: <b style="color:var(--gold2);">'+wStatusLabel+'</b></div>'+
     '</div>';
   }
 
@@ -1478,7 +1509,7 @@ function onAppClick(e){
     render();
     /* מאפסים גם את votingOpenedAt כדי שמעבר לשיר חדש לא "יזכור" בטעות
        שההצבעה כבר נפתחה/הסתיימה עבור השיר הקודם (ראו viewVoting —
-       ה-flag הזה הוא מה שמבדיל בין "עוד לא נפתחה" ל"הסתיים זמן ההצבעה"). */
+       ה-flag הזה הוא מה שמבדיל בין "עוד לא נפתחה" ל"ההצבעה נסגרה"). */
     database.doc("state/admin").update({stage:"voting", currentSong:Number(el.dataset.n), votingOpen:false, votingOpenedAt:null});
   } else if(action === "admin-toggle-voting"){
     if(!database) return;
@@ -1520,6 +1551,13 @@ function onAppClick(e){
   } else if(action === "admin-reveal-order-reset"){
     if(!database) return;
     database.doc("state/admin").update({revealOrder:null, correctAnswers:{}, currentRevealSong:null, revealPct:null});
+  } else if(action === "admin-winners-step"){
+    if(!database) return;
+    database.doc("state/admin").update({winnersStep: Number(el.dataset.step)});
+  } else if(action === "admin-winners-refresh"){
+    STATE.stats = null;
+    STATE.winnersStatsFresh = true;
+    render();
   } else if(action === "admin-podium-step"){
     if(!database) return;
     database.doc("state/admin").update({podiumStep: Number(el.dataset.step)});
@@ -1543,7 +1581,7 @@ function onAppClick(e){
 function doAdminReset(){
   var database = getDb();
   if(!database) return;
-  database.doc("state/admin").set({stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
+  database.doc("state/admin").set({stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, winnersStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
   ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -1571,7 +1609,7 @@ function subscribeAdminState(){
     if(snap.exists){
       STATE.adminState = snap.data();
     } else {
-      STATE.adminState = {stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
+      STATE.adminState = {stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, winnersStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
       if(STATE.isAdmin && !ensuredAdminDoc){
         ensuredAdminDoc = true;
         database.doc("state/admin").set(STATE.adminState);
@@ -1736,7 +1774,6 @@ function init(){
   if(getParticipantName()) ensureParticipantDoc();
   subscribeAdminState();
   if(STATE.isAdmin) subscribeAdminExtras();
-  startVotingTicker();
 }
 
 init();
