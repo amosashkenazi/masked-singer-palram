@@ -847,7 +847,7 @@ function viewPodium(st){
 function ensureFreshWinnersStats(st){
   /* פעם אחת בכניסה לשלב: מחשבים את הדירוג מחדש, כדי שלא יוצג דירוג
      ישן שחושב לפני שכל החשיפות הסתיימו או לפני הצבעות מאוחרות. */
-  if(!STATE.winnersStatsFresh && !STATE.statsLoading){
+  if(STATE.isAdmin && !window.MS_DISPLAY_MODE && !STATE.winnersStatsFresh && !STATE.statsLoading){
     STATE.winnersStatsFresh = true;
     STATE.stats = null;
   }
@@ -904,10 +904,18 @@ function viewWinners(st, tv){
 
 /* ===================== STATS AGGREGATION ===================== */
 
-function loadStats(st){
+/* ---- שלוש שכבות: ----
+   1) computeStats — שאילתות כבדות (כ-2,000 קריאות Firestore). רצות *רק*
+      במכשיר הניהול, לא בכל אחד מ-250 הטלפונים של הקהל.
+   2) adminPublishStats — מחשבת ושומרת את התוצאה במסמך אחד, state/stats.
+   3) subscribeStatsDoc — כל טלפון/מסך באולם קורא את המסמך הזה בלבד
+      (קריאה אחת במקום אלפים), ומתעדכן חי כשהמנהל/ת מפרסם/ת מחדש. */
+function emptyStats(){
+  return {totalParticipants:1, songs:{}, bestVotes:{}, participants:{}, rankedParticipants:[]};
+}
+
+function computeStats(st){
   var database = getDb();
-  if(!database){ return; }
-  STATE.statsLoading = true;
   var ca = st.correctAnswers || {};
 
   var songQueries = SONGS.map(function(s){
@@ -916,7 +924,7 @@ function loadStats(st){
   var bestQ = database.collection("bestVotes").limit(1000).get();
   var partQ = database.collection("participants").limit(1000).get();
 
-  Promise.all(songQueries.concat([bestQ, partQ])).then(function(results){
+  return Promise.all(songQueries.concat([bestQ, partQ])).then(function(results){
     var songSnaps = results.slice(0,6);
     var bestSnap = results[6];
     var partSnap = results[7];
@@ -967,20 +975,90 @@ function loadStats(st){
     var participants = {};
     ranked.forEach(function(p, i){ participants[p.pid] = {correct:p.correct, rank:i+1, name:p.name}; });
 
-    STATE.stats = {
+    return {
       totalParticipants: allPids.length || 1,
       songs: songs,
       bestVotes: bestVotes,
       participants: participants,
       rankedParticipants: ranked
     };
+  });
+}
+
+/* מכשיר הניהול: חישוב מקומי לצורך הצגה במסכי הניהול */
+function adminComputeStats(st){
+  if(!getDb()) return;
+  STATE.statsLoading = true;
+  computeStats(st).then(function(stats){
+    STATE.stats = stats;
     STATE.statsLoading = false;
+    render();
+  }).catch(function(){
+    STATE.stats = emptyStats();
+    STATE.statsLoading = false;
+    render();
+  });
+}
+
+/* מכשיר הניהול: חישוב + פרסום למסמך state/stats (נקרא אוטומטית בכל
+   כניסה לשלב פודיום / מנחשים מובילים / סיכום / לוחות תוצאות, ובלחיצה
+   על "חישוב מחדש"). done נקרא תמיד — גם אם הפרסום נכשל — כדי שמעבר
+   השלב לא ייתקע. */
+function adminPublishStats(st, done){
+  var database = getDb();
+  if(!database){ if(done) done(); return; }
+  STATE.statsLoading = true;
+  computeStats(st).then(function(stats){
+    STATE.stats = stats;
+    STATE.statsLoading = false;
+    STATE.winnersStatsFresh = true;
+    var slim = stats.rankedParticipants.map(function(p){ return {pid:p.pid, name:p.name, correct:p.correct}; });
+    return database.doc("state/stats").set({ts:Date.now(), ranked:slim, songs:stats.songs, bestVotes:stats.bestVotes});
+  }).then(function(){
+    if(done) done();
     render();
   }).catch(function(err){
     STATE.statsLoading = false;
-    STATE.stats = {totalParticipants:1, songs:{}, bestVotes:{}, participants:{}, rankedParticipants:[]};
+    try{ console.error("[הזמר במסכה] פרסום הדירוג נכשל", err); }catch(e){}
+    if(done) done();
     render();
   });
+}
+
+function statsFromDoc(d){
+  var ranked = (d && d.ranked) || [];
+  var participants = {};
+  ranked.forEach(function(p, i){ participants[p.pid] = {correct:p.correct, rank:i+1, name:p.name}; });
+  return {
+    totalParticipants: ranked.length || 1,
+    songs: (d && d.songs) || {},
+    bestVotes: (d && d.bestVotes) || {},
+    participants: participants,
+    rankedParticipants: ranked
+  };
+}
+
+/* קהל + מסך אולם: מאזינים למסמך המסוכם. אין שאילתות כבדות. */
+var statsDocSubscribed = false;
+function subscribeStatsDoc(){
+  if(statsDocSubscribed) return;
+  var database = getDb();
+  if(!database) return;
+  statsDocSubscribed = true;
+  STATE.statsLoading = true;
+  database.doc("state/stats").onSnapshot(function(snap){
+    STATE.statsLoading = false;
+    STATE.stats = snap.exists ? statsFromDoc(snap.data()) : null;
+    render();
+  }, function(){
+    STATE.statsLoading = false;
+    statsDocSubscribed = false;
+  });
+}
+
+function loadStats(st){
+  if(STATE.isAdmin && !window.MS_DISPLAY_MODE){ adminComputeStats(st); return; }
+  subscribeStatsDoc();
 }
 
 function adminComputeRevealOrder(){
@@ -1483,10 +1561,17 @@ function onAppClick(e){
     database.doc("state/admin").update({warmupOpen: el.dataset.open === "1"});
   } else if(action === "admin-toggle-warmup-results"){
     if(!database) return;
-    database.doc("state/admin").update({warmupResultsVisible: el.dataset.open === "1"});
+    var patchWR = {warmupResultsVisible: el.dataset.open === "1"};
+    if(el.dataset.open === "1"){
+      var curWu = STATE.adminWarmup || {total:0, counts:{}};
+      patchWR.warmupCounts = {total: curWu.total, counts: curWu.counts};
+    }
+    database.doc("state/admin").update(patchWR);
   } else if(action === "refresh-stats"){
-    STATE.stats = null;
-    render();
+    /* אצל הקהל הנתונים מתעדכנים חי ממסמך state/stats; רק מכשיר
+       הניהול מחשב מחדש ומפרסם. */
+    if(STATE.isAdmin && !window.MS_DISPLAY_MODE){ adminPublishStats(STATE.adminState || {}); }
+    else { render(); }
   } else if(action === "goto-admin"){
     STATE.isAdmin = true;
     try{ history.replaceState(null, "", "#admin"); }catch(err){}
@@ -1522,7 +1607,17 @@ function onAppClick(e){
     STATE.adminView = "stage";
     STATE.adminBrowseStage = el.dataset.stage;
     render();
-    database.doc("state/admin").update({stage: el.dataset.stage});
+    var newStage = el.dataset.stage;
+    if(["podium","winners","summary","leaderboards"].indexOf(newStage) > -1){
+      /* שלבים שמציגים דירוג: קודם מחשבים ומפרסמים את הדירוג פעם אחת
+         (במכשיר הניהול), ורק אז מעבירים את הקהל — כך אף טלפון לא
+         מריץ שאילתות כבדות בעצמו. */
+      adminPublishStats(STATE.adminState || {}, function(){
+        database.doc("state/admin").update({stage: newStage});
+      });
+    } else {
+      database.doc("state/admin").update({stage: newStage});
+    }
   } else if(action === "admin-compute-order"){
     adminComputeRevealOrder();
   } else if(action === "admin-reveal-announce"){
@@ -1555,9 +1650,7 @@ function onAppClick(e){
     if(!database) return;
     database.doc("state/admin").update({winnersStep: Number(el.dataset.step)});
   } else if(action === "admin-winners-refresh"){
-    STATE.stats = null;
-    STATE.winnersStatsFresh = true;
-    render();
+    adminPublishStats(STATE.adminState || {});
   } else if(action === "admin-podium-step"){
     if(!database) return;
     database.doc("state/admin").update({podiumStep: Number(el.dataset.step)});
@@ -1582,6 +1675,7 @@ function doAdminReset(){
   var database = getDb();
   if(!database) return;
   database.doc("state/admin").set({stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, winnersStep:0, resetEpoch: Date.now(), warmupOpen:false, warmupResultsVisible:false, warmupCounts:null});
+  database.doc("state/stats").delete();
   ["participants","votes","bestVotes","warmupVotes"].forEach(function(col){
     database.collection(col).limit(1000).get().then(function(snap){
       snap.docs.forEach(function(d){ database.doc(col+"/"+d.id).delete(); });
@@ -1599,183 +1693,4 @@ function ensureParticipantDoc(){
 
 var ensuredAdminDoc = false;
 function subscribeAdminState(){
-  var database = getDb();
-  if(!database){
-    setTimeout(subscribeAdminState, 400);
-    return;
-  }
-  database.doc("state/admin").onSnapshot(function(snap){
-    STATE.connStatus = "ok";
-    if(snap.exists){
-      STATE.adminState = snap.data();
-    } else {
-      STATE.adminState = {stage:"warmup", currentSong:1, votingOpen:false, votingOpenedAt:null, currentRevealSong:null, correctAnswers:{}, answerKey:{}, revealOrder:null, revealPct:{}, podiumStep:0, winnersStep:0, warmupOpen:false, warmupResultsVisible:false, warmupCounts:null};
-      if(STATE.isAdmin && !ensuredAdminDoc){
-        ensuredAdminDoc = true;
-        database.doc("state/admin").set(STATE.adminState);
-      }
-    }
-    var st = STATE.adminState;
-
-    /* אם המנהל ביצע "איפוס האירוע" מאז שהמכשיר הזה נכנס בפעם האחרונה —
-       resetEpoch ישתנה, ואנחנו שוכחים את הזהות המקומית (שם/הצבעות)
-       כדי שהמשתתף/ת יחזרו למסך הקלדת השם ולא "יופיעו" ברשימות בלי
-       שבאמת השתתפו אחרי האיפוס. */
-    if(st.resetEpoch){
-      var localEpoch = getLocalEpoch();
-      if(localEpoch && localEpoch !== String(st.resetEpoch)){
-        forgetParticipantIdentity();
-      }
-      setLocalEpoch(st.resetEpoch);
-    }
-
-    if(st.stage === "voting" && STATE.myVotes[st.currentSong] === undefined && getParticipantName()){
-      fetchMyVote(st.currentSong);
-    }
-    if((st.stage === "reveal" || st.stage === "summary") && getParticipantName()){
-      fetchAllMyVotes();
-    }
-    if(st.stage === "finalVote" && STATE.myBest === null && getParticipantName()){
-      fetchMyBest();
-    }
-    if(st.stage === "warmup" && STATE.myWarmup === undefined && getParticipantName()){
-      fetchMyWarmup();
-    }
-    render();
-  }, function(err){
-    STATE.connStatus = "error";
-    render();
-  });
-}
-
-function fetchMyVote(song){
-  var database = getDb();
-  if(!database) return;
-  database.doc("votes/"+song+"_"+pid).get().then(function(snap){
-    STATE.myVotes[song] = snap.exists ? snap.data().candidate : null;
-    render();
-  });
-}
-function fetchAllMyVotes(){
-  var database = getDb();
-  if(!database) return;
-  var missing = SONGS.filter(function(s){ return STATE.myVotes[s.id] === undefined; });
-  if(!missing.length) return;
-  Promise.all(missing.map(function(s){
-    return database.doc("votes/"+s.id+"_"+pid).get().then(function(snap){
-      STATE.myVotes[s.id] = snap.exists ? snap.data().candidate : null;
-    });
-  })).then(render);
-}
-function fetchMyBest(){
-  var database = getDb();
-  if(!database) return;
-  database.doc("bestVotes/"+pid).get().then(function(snap){
-    STATE.myBest = snap.exists ? snap.data().song : null;
-    render();
-  });
-}
-function fetchMyWarmup(){
-  var database = getDb();
-  if(!database) return;
-  database.doc("warmupVotes/"+pid).get().then(function(snap){
-    STATE.myWarmup = snap.exists ? snap.data().choice : null;
-    render();
-  });
-}
-
-var adminExtrasStarted = false;
-function subscribeAdminExtras(){
-  if(adminExtrasStarted) return;
-  var database = getDb();
-  if(!database){
-    setTimeout(subscribeAdminExtras, 400);
-    return;
-  }
-  adminExtrasStarted = true;
-  database.collection("participants").limit(1000).onSnapshot(function(snap){
-    STATE.adminParticipantCount = snap.size;
-    STATE.adminParticipants = snap.docs.map(function(d){
-      var data = d.data() || {};
-      return {id:d.id, name:data.name || "", joinedAt: data.joinedAt || 0};
-    }).sort(function(a,b){ return a.joinedAt - b.joinedAt; });
-    render();
-  }, function(){});
-
-  /* תוצאות שאלת החימום מתעדכנות חי, בלי קשר לשלב הנוכחי — כך שגם
-     אחרי שעוברים הלאה, אפשר לחזור ולהציג את התוצאות המצטברות. */
-  database.collection("warmupVotes").limit(1000).onSnapshot(function(snap){
-    var counts = {};
-    snap.docs.forEach(function(d){
-      var data = d.data() || {};
-      if(data.choice != null) counts[data.choice] = (counts[data.choice]||0) + 1;
-    });
-    STATE.adminWarmup = {total: snap.size, counts: counts};
-    /* כותבים את הסיכום גם ל-state/admin, כדי שכל מכשירי הקהל (שכבר
-       מאזינים למסמך הזה ממילא) יוכלו להציג את התוצאות בלי שכל טלפון
-       יצטרך לשלוח שאילתה נפרדת ל-warmupVotes בעצמו. */
-    database.doc("state/admin").update({warmupCounts: {total: snap.size, counts: counts}});
-    render();
-  }, function(){});
-
-  var lastSong = null;
-  var unsubVotes = null;
-  var interval = setInterval(function(){
-    var st = STATE.adminState;
-    if(!st || st.stage !== "voting"){ return; }
-    if(st.currentSong === lastSong) return;
-    lastSong = st.currentSong;
-    if(unsubVotes) unsubVotes();
-    unsubVotes = database.collection("votes").where("song","==",st.currentSong).limit(1000).onSnapshot(function(snap){
-      STATE.adminVoteCount = snap.size;
-      render();
-    }, function(){});
-  }, 500);
-}
-
-/* מקבילה מצומצמת ל"מעקב אחר ספירת הצבעות חי לשיר הנוכחי" מתוך
-   subscribeAdminExtras, אבל רק לצורך הזה — בלי מנוי participants/
-   warmupVotes ובלי הכתיבה החוזרת ל-state/admin.warmupCounts, שהיא
-   באחריות מסך הניהול בלבד (subscribeAdminExtras למעלה). מסך התצוגה
-   (display.html) קורא לזה במקום ל-subscribeAdminExtras. */
-var displayVoteCountStarted = false;
-function subscribeDisplayVoteCount(){
-  if(displayVoteCountStarted) return;
-  var database = getDb();
-  if(!database){
-    setTimeout(subscribeDisplayVoteCount, 400);
-    return;
-  }
-  displayVoteCountStarted = true;
-  var lastSong = null;
-  var unsubVotes = null;
-  setInterval(function(){
-    var st = STATE.adminState;
-    if(!st || st.stage !== "voting"){ return; }
-    if(st.currentSong === lastSong) return;
-    lastSong = st.currentSong;
-    if(unsubVotes) unsubVotes();
-    unsubVotes = database.collection("votes").where("song","==",st.currentSong).limit(1000).onSnapshot(function(snap){
-      STATE.displayVoteCount = snap.size;
-      render();
-    }, function(){});
-  }, 500);
-}
-
-/* ===================== INIT ===================== */
-
-function init(){
-  render();
-  if(window.MS_DISPLAY_MODE){
-    subscribeAdminState();
-    subscribeDisplayVoteCount();
-    return;
-  }
-  if(getParticipantName()) ensureParticipantDoc();
-  subscribeAdminState();
-  if(STATE.isAdmin) subscribeAdminExtras();
-}
-
-init();
-
-})();
+  var datab
