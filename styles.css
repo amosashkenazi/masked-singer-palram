@@ -100,10 +100,10 @@ h1.page-title{font-size:24px; font-weight:900; margin:6px 0 0; text-wrap:balance
      הפך ללבן על אותו רקע בהיר במקרה — בדיוק "לבן על לבן". */
   background:var(--card2);
 }
-/* ריבוע מעוגל שממלא את כל רוחב האריח (לא גודל קבוע) — כך התמונה תופסת
+/* מסגרת עומדת (4:5) שממלאת את כל רוחב האריח — מתאימה לתמונות פורטרט בלי חיתוך (לא גודל קבוע) — כך התמונה תופסת
    את כל השטח הפנוי ברשת. aspect-ratio שומר על ריבוע בכל רוחב מסך. */
 .cand .avatar-wrap{
-  width:100%; aspect-ratio:1/1; height:auto;
+  width:100%; aspect-ratio:4/5; height:auto;
   border-radius:16px; overflow:hidden; position:relative;
   border:2px solid var(--line-soft);
 }
