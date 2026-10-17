@@ -1330,11 +1330,13 @@ function adminMain(st){
       var revealed = ca[sid] != null;
       var isPending = sid === pendingSong;
       var isNext = sid === nextToAnnounce;
+      var pctTxt = (st.revealPct && st.revealPct[sid] != null) ? st.revealPct[sid]+'%' : '—';
       var statusLabel = revealed ? "נחשף לקהל" : (isPending ? "הוכרז — ממתין לחשיפה" : (isNext ? "הבא בתור" : "ממתין"));
       return '<div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;'+((isPending||isNext)?'border-color:var(--gold);':'')+(revealed?'opacity:.6;':'')+'">'+
         '<div style="width:24px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
         '<div class="song-icon-badge" style="background:'+s.bg+';"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" stroke="'+s.stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.path+'</svg></div>'+
         '<div style="flex:1;"><div style="font-weight:800; font-size:13.5px;">'+s.id+' · '+h(s.name)+'</div><div style="font-size:11.5px; color:var(--ink-dim);">'+(c?h(c.name):'')+'</div></div>'+
+        '<div style="text-align:center; min-width:58px;"><div style="font-size:19px; font-weight:800; color:var(--gold2); line-height:1;">'+pctTxt+'</div><div style="font-size:10px; color:var(--ink-dim); margin-top:3px;">זיהו נכון</div></div>'+
         '<div style="font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:8px; background:var(--card2); color:'+(revealed?'var(--ok)':'var(--gold2)')+';">'+statusLabel+'</div>'+
       '</div>';
     }).join("");
