@@ -1405,11 +1405,13 @@ function adminMain(st){
       return '<div class="admin-main">'+viewLoading("סופרים ניחושים…")+'</div>';
     }
     var wRanked = STATE.stats.rankedParticipants || [];
-    var wRowsA = wRanked.slice(0,10).map(function(p,i){
+    var wRowsA = wRanked.map(function(p,i){
+      var secs = (typeof p.time === "number" && p.time > 0) ? (Math.round(p.time/100)/10)+' שנ׳' : '';
       return '<div class="row-card">'+
-        '<div style="width:26px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
+        '<div style="width:34px; text-align:center; font-weight:800; color:var(--gold2);">'+(i+1)+'</div>'+
         '<div style="flex:1; font-weight:700; font-size:13.5px;">'+h(p.name)+'</div>'+
-        '<div style="font-size:12px; font-weight:800; color:var(--gold2);">'+p.correct+'/'+SONGS.length+'</div>'+
+        '<div style="font-size:11px; color:var(--ink-dim); min-width:54px; text-align:center;">'+secs+'</div>'+
+        '<div style="font-size:12px; font-weight:800; color:var(--gold2); min-width:34px; text-align:center;">'+p.correct+'/'+SONGS.length+'</div>'+
       '</div>';
     }).join("") || '<div class="sub">אין עדיין משתתפים עם ניחושים.</div>';
     var wStep = st.winnersStep || 0;
@@ -1418,8 +1420,8 @@ function adminMain(st){
       '<div class="admin-h">פודיום — המנחשים המובילים</div>'+
       '<h1 class="page-title">חשיפת הזוכים בקהל</h1>'+
       liveNoticeHTML(st, "winners")+
-      '<div class="sub">הדירוג (10 הראשונים) גלוי רק לך. בשוויון בניחושים נקבע המקום לפי מהירות המענה. לוחצים בסדר — שלישי, שני, ראשון — כדי לחשוף לקהל מקום אחרי מקום, כל אחד במסך נפרד.</div>'+
-      '<div style="margin-top:16px; max-width:420px;">'+wRowsA+'</div>'+
+      '<div class="sub">הדירוג המלא ('+wRanked.length+' משתתפים) גלוי רק לך. בשוויון בניחושים נקבע המקום לפי מהירות המענה. לוחצים בסדר — שלישי, שני, ראשון — כדי לחשוף לקהל מקום אחרי מקום, כל אחד במסך נפרד.</div>'+
+      '<div style="margin-top:16px; max-width:460px; max-height:55vh; overflow-y:auto;">'+wRowsA+'</div>'+
       '<div style="display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;">'+
         '<button class="btn '+(wStep===1?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-winners-step" data-step="1">חשיפת מקום שלישי</button>'+
         '<button class="btn '+(wStep===2?'btn-outline':'btn-gold')+'" style="width:auto; padding:14px 18px;" data-action="admin-winners-step" data-step="2">חשיפת מקום שני</button>'+
