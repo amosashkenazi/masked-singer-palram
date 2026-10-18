@@ -917,6 +917,16 @@ function emptyStats(){
 function computeStats(st){
   var database = getDb();
   var ca = st.correctAnswers || {};
+  /* התשובה הנכונה לכל שיר: מה שנחשף בפועל > מה ששמור ב-answerKey >
+     הערך הקבוע מראש ב-config.js. כך הדירוג של המנחשים המובילים לא
+     תלוי בזה שכל החשיפות בוצעו בלחיצות (למשל אחרי ניתוקי wifi). */
+  var ansKey = {};
+  SONGS.forEach(function(sg){
+    var v = ca[sg.id];
+    if(v == null) v = (st.answerKey || {})[sg.id];
+    if(v == null) v = sg.revealAnswer;
+    if(v != null && v !== "") ansKey[sg.id] = Number(v);
+  });
 
   var songQueries = SONGS.map(function(s){
     return database.collection("votes").where("song","==",s.id).limit(1000).get();
@@ -944,7 +954,7 @@ function computeStats(st){
       snap.docs.forEach(function(d){
         var data = d.data() || {};
         total++;
-        var isOk = ca[songId] != null && data.candidate === ca[songId];
+        var isOk = ansKey[songId] != null && Number(data.candidate) === ansKey[songId];
         if(isOk) correct++;
         if(!perParticipant[data.pid]) perParticipant[data.pid] = 0;
         if(!perParticipantTime[data.pid]) perParticipantTime[data.pid] = 0;
